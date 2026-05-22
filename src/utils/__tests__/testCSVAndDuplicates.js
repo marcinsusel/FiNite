@@ -259,8 +259,108 @@ try {
     process.exit(1);
   }
 
-  console.log('\n🎉 ALL CORE LOGIC TESTS PASSED SUCCESSFULLY! 🎉');
+  // Test 7: Net Worth Calculation
+  console.log('\nTest 7: Net Worth Calculation...');
 
+  const testNWAccounts = [
+    { id: 'acc-checking', type: 'checking', bank: 'Chase' },
+    { id: 'acc-credit', type: 'credit', bank: 'Citi' },
+    {
+      id: 'acc-summary',
+      type: 'summary',
+      bank: 'Manual',
+      balances: [
+        { id: 'b1', date: '2026-04-01', balance: 50000.00 },
+        { id: 'b2', date: '2026-05-01', balance: 55000.00 }
+      ]
+    }
+  ];
+
+  const testNWTransactions = [
+    { accountId: 'acc-checking', amount: 1000.00, date: '2026-03-15' },
+    { accountId: 'acc-checking', amount: -200.00, date: '2026-04-10' },
+    { accountId: 'acc-credit', amount: -500.00, date: '2026-04-05' },
+    { accountId: 'acc-credit', amount: 100.00, date: '2026-05-02' }
+  ];
+
+  const calculateNetWorthForDate = (D, accounts, transactions) => {
+    let assets = 0;
+    let liabilities = 0;
+
+    accounts.forEach(acc => {
+      let balance = 0;
+      if (acc.type === 'summary') {
+        const sorted = [...(acc.balances || [])].sort((a, b) => b.date.localeCompare(a.date));
+        const latest = sorted.find(entry => entry.date <= D);
+        balance = latest ? latest.balance : 0;
+      } else {
+        balance = transactions
+          .filter(t => t.accountId === acc.id && t.date <= D)
+          .reduce((sum, t) => sum + t.amount, 0);
+      }
+
+      if (balance > 0) {
+        assets += balance;
+      } else {
+        liabilities += Math.abs(balance);
+      }
+    });
+
+    return { assets, liabilities, netWorth: assets - liabilities };
+  };
+
+  // Test 7a: 2026-03-01
+  const nwMar = calculateNetWorthForDate('2026-03-01', testNWAccounts, testNWTransactions);
+  if (nwMar.netWorth === 0 && nwMar.assets === 0 && nwMar.liabilities === 0) {
+    console.log('  ✅ 2026-03-01 Net Worth is correctly $0.00');
+  } else {
+    console.error('  ❌ 2026-03-01 Net Worth calculated incorrectly:', nwMar);
+    process.exit(1);
+  }
+
+  // Test 7b: 2026-04-01
+  const nwApr = calculateNetWorthForDate('2026-04-01', testNWAccounts, testNWTransactions);
+  if (nwApr.assets === 51000 && nwApr.liabilities === 0 && nwApr.netWorth === 51000) {
+    console.log('  ✅ 2026-04-01 Net Worth matches expected: Assets=$51k, Liabilities=$0, Net Worth=$51k');
+  } else {
+    console.error('  ❌ 2026-04-01 Net Worth calculated incorrectly:', nwApr);
+    process.exit(1);
+  }
+
+  // Test 7c: 2026-05-01
+  const nwMay = calculateNetWorthForDate('2026-05-01', testNWAccounts, testNWTransactions);
+  if (nwMay.assets === 55800 && nwMay.liabilities === 500 && nwMay.netWorth === 55300) {
+    console.log('  ✅ 2026-05-01 Net Worth matches expected: Assets=$55.8k, Liabilities=$500, Net Worth=$55.3k');
+  } else {
+    console.error('  ❌ 2026-05-01 Net Worth calculated incorrectly:', nwMay);
+    process.exit(1);
+  }
+
+  // Test 8: Month Name Date Parsing
+  console.log('\nTest 8: Month Name Date Parsing...');
+  const mockCSVText = `Type,Date,Description,Status,Amount
+"Purchase","May 14 2026","SAMS CLUB.COM 006279 BENTONVILLE AR","Completed","$23.96"
+"Purchase","Apr 29 2026","WALMART 000206 MCKINNEY TX","Completed","$10.79"
+"Purchase","Feb 4 2026","SAM'S CLUB 004906 MCKINNEY TX","Completed","$103.11"`;
+
+  const parsedCSV = parseBankStatement(mockCSVText);
+  if (parsedCSV.error) {
+    console.error('  ❌ Month Name Date CSV parsing failed:', parsedCSV.error);
+    process.exit(1);
+  }
+
+  const txs = parsedCSV.transactions;
+  if (txs.length === 3 &&
+      txs[0].date === '2026-05-14' &&
+      txs[1].date === '2026-04-29' &&
+      txs[2].date === '2026-02-04') {
+    console.log('  ✅ Month name dates parsed correctly to ISO YYYY-MM-DD');
+  } else {
+    console.error('  ❌ Month name dates parsed incorrectly:', txs);
+    process.exit(1);
+  }
+
+  console.log('\n🎉 ALL CORE LOGIC TESTS PASSED SUCCESSFULLY! 🎉');
 
 } catch (err) {
   console.error('❌ Unexpected test runner error:', err);

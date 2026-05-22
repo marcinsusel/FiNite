@@ -62,6 +62,11 @@ async function apiRequest(url, method = 'GET', token, body = null, headers = {})
   if (body) {
     if (body instanceof Blob || body instanceof ArrayBuffer || body instanceof FormData) {
       options.body = body;
+    } else if (typeof body === 'string') {
+      options.body = body;
+      if (!options.headers['Content-Type']) {
+        options.headers['Content-Type'] = 'text/plain';
+      }
     } else {
       options.body = JSON.stringify(body);
       options.headers['Content-Type'] = 'application/json';
@@ -145,23 +150,22 @@ async function createFileInFolder(fileName, folderId, content, token) {
   };
 
   const boundary = 'finite_boundary_marker';
-  const delimiter = `\r\n--${boundary}\r\n`;
-  const closeDelimiter = `\r\n--${boundary}--`;
 
   const multipartBody = 
-    delimiter +
+    `--${boundary}\r\n` +
     'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
     JSON.stringify(metadata) +
-    delimiter +
+    `\r\n--${boundary}\r\n` +
     'Content-Type: application/json\r\n\r\n' +
     JSON.stringify(content) +
-    closeDelimiter;
+    `\r\n--${boundary}--`;
 
   const url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
   return apiRequest(url, 'POST', token, multipartBody, {
     'Content-Type': `multipart/related; boundary=${boundary}`
   });
 }
+
 
 /**
  * Updates an existing file's content (JSON database).
@@ -196,8 +200,8 @@ export async function syncAndLoadDatabase(token) {
 
   const folderId = folder.id;
 
-  // 2. Find or create "transactions.json"
-  let file = await findFileInFolder('transactions.json', folderId, token);
+  // 2. Find or create "appData.json"
+  let file = await findFileInFolder('appData.json', folderId, token);
   
   if (!file) {
     // File doesn't exist, initialize default database state
@@ -216,12 +220,13 @@ export async function syncAndLoadDatabase(token) {
       transactions: []
     };
 
-    const newFile = await createFileInFolder('transactions.json', folderId, defaultDb, token);
+    const newFile = await createFileInFolder('appData.json', folderId, defaultDb, token);
     return {
       fileId: newFile.id,
       data: defaultDb
     };
   }
+
 
   // 3. File exists, download content
   const dbData = await downloadFileContent(file.id, token);

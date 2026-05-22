@@ -47,13 +47,63 @@ export function parseCSV(text) {
  */
 function normalizeDate(dateStr) {
   if (!dateStr) return '';
-  const parts = dateStr.split('/');
-  if (parts.length === 3) {
-    const m = parts[0].padStart(2, '0');
-    const d = parts[1].padStart(2, '0');
-    const y = parts[2];
+  
+  // 1. Try MM/DD/YYYY
+  const slashParts = dateStr.split('/');
+  if (slashParts.length === 3) {
+    const m = slashParts[0].padStart(2, '0');
+    const d = slashParts[1].padStart(2, '0');
+    const y = slashParts[2];
     return `${y}-${m}-${d}`;
   }
+
+  // 2. Try hyphenated MM-DD-YYYY or YYYY-MM-DD
+  const hyphenParts = dateStr.split('-');
+  if (hyphenParts.length === 3) {
+    if (hyphenParts[0].length === 4) {
+      return dateStr;
+    }
+    const m = hyphenParts[0].padStart(2, '0');
+    const d = hyphenParts[1].padStart(2, '0');
+    const y = hyphenParts[2];
+    return `${y}-${m}-${d}`;
+  }
+
+  // 3. Try space-separated Month Day Year (e.g. "May 14 2026" or "May 14, 2026")
+  const cleaned = dateStr.replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
+  const spaceParts = cleaned.split(' ');
+  if (spaceParts.length === 3) {
+    const monthMap = {
+      jan: '01', january: '01',
+      feb: '02', february: '02',
+      mar: '03', march: '03',
+      apr: '04', april: '04',
+      may: '05',
+      jun: '06', june: '06',
+      jul: '07', july: '07',
+      aug: '08', august: '08',
+      sep: '09', september: '09', sept: '09',
+      oct: '10', october: '10',
+      nov: '11', november: '11',
+      dec: '12', december: '12'
+    };
+
+    const p0Lower = spaceParts[0].toLowerCase();
+    const p1Lower = spaceParts[1].toLowerCase();
+
+    if (monthMap[p0Lower]) {
+      const m = monthMap[p0Lower];
+      const d = spaceParts[1].padStart(2, '0');
+      const y = spaceParts[2];
+      return `${y}-${m}-${d}`;
+    } else if (monthMap[p1Lower]) {
+      const m = monthMap[p1Lower];
+      const d = spaceParts[0].padStart(2, '0');
+      const y = spaceParts[2];
+      return `${y}-${m}-${d}`;
+    }
+  }
+
   return dateStr;
 }
 

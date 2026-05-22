@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   LayoutGrid, Receipt, Landmark, Settings as SettingsIcon, 
-  Upload, Cloud, Moon, Sun, AlertTriangle, ShieldCheck, CheckCircle2, Tag
+  Upload, Cloud, Moon, Sun, AlertTriangle, ShieldCheck, CheckCircle2, Tag,
+  TrendingUp
 } from 'lucide-react';
 
 import Dashboard from './components/Dashboard';
@@ -10,6 +11,7 @@ import AccountManager from './components/AccountManager';
 import DuplicateWizard from './components/DuplicateWizard';
 import Settings from './components/Settings';
 import CategoryManager from './components/CategoryManager';
+import NetWorth from './components/NetWorth';
 
 import { parseBankStatement } from './utils/csvParser';
 import { detectDuplicates } from './utils/duplicateDetector';
@@ -253,6 +255,13 @@ export default function App() {
             categories={database.categories}
           />
         );
+      case 'net-worth':
+        return (
+          <NetWorth 
+            transactions={database.transactions}
+            accounts={database.accounts}
+          />
+        );
       case 'transactions':
         return (
           <TransactionList 
@@ -466,6 +475,15 @@ export default function App() {
               </li>
               <li>
                 <div 
+                  className={`nav-item ${currentView === 'net-worth' ? 'active' : ''}`}
+                  onClick={() => setCurrentView('net-worth')}
+                >
+                  <TrendingUp size={18} />
+                  <span>Net Worth</span>
+                </div>
+              </li>
+              <li>
+                <div 
                   className={`nav-item ${currentView === 'transactions' ? 'active' : ''}`}
                   onClick={() => setCurrentView('transactions')}
                 >
@@ -551,6 +569,7 @@ export default function App() {
         <header className="header-bar">
           <h2 style={{ fontSize: '1.25rem' }}>
             {currentView === 'dashboard' && 'Dashboard Overview'}
+            {currentView === 'net-worth' && 'Net Worth History'}
             {currentView === 'transactions' && 'Transactions'}
             {currentView === 'accounts' && 'Configure Bank Accounts'}
             {currentView === 'categories' && 'Manage Categories'}

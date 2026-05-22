@@ -10,12 +10,21 @@ export default function TransactionList({
   onDeleteTransaction 
 }) {
   // Filter States
-  const [filterAccount, setFilterAccount] = useState('all');
-  const [filterCategory, setFilterCategory] = useState('all');
-  const [filterReviewed, setFilterReviewed] = useState('all');
-  const [filterSearch, setFilterSearch] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [filterAccount, setFilterAccount] = useState(() => localStorage.getItem('finite_filter_account') || 'all');
+  const [filterCategory, setFilterCategory] = useState(() => localStorage.getItem('finite_filter_category') || 'all');
+  const [filterReviewed, setFilterReviewed] = useState(() => localStorage.getItem('finite_filter_reviewed') || 'all');
+  const [filterSearch, setFilterSearch] = useState(() => localStorage.getItem('finite_filter_search') || '');
+  const [startDate, setStartDate] = useState(() => localStorage.getItem('finite_filter_start_date') || '');
+  const [endDate, setEndDate] = useState(() => localStorage.getItem('finite_filter_end_date') || '');
+
+  React.useEffect(() => {
+    localStorage.setItem('finite_filter_account', filterAccount);
+    localStorage.setItem('finite_filter_category', filterCategory);
+    localStorage.setItem('finite_filter_reviewed', filterReviewed);
+    localStorage.setItem('finite_filter_search', filterSearch);
+    localStorage.setItem('finite_filter_start_date', startDate);
+    localStorage.setItem('finite_filter_end_date', endDate);
+  }, [filterAccount, filterCategory, filterReviewed, filterSearch, startDate, endDate]);
 
   // Active Transaction for Split Drawer
   const [activeTx, setActiveTx] = useState(null);
@@ -141,6 +150,21 @@ export default function TransactionList({
     }
   };
 
+  const handleDrawerKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      if (inlineNewCatForSplit !== null) {
+        return;
+      }
+      e.preventDefault();
+      if (activeTx.reviewed) {
+        handleCloseDrawer();
+      } else if (isBalanced) {
+        handleSaveSplits();
+      }
+    }
+  };
+
+
   // Filter Logic
   const filteredTransactions = transactions.filter(tx => {
     // Account filter
@@ -228,7 +252,7 @@ export default function TransactionList({
               onChange={(e) => setFilterAccount(e.target.value)}
             >
               <option value="all">All Accounts</option>
-              {accounts.map(acc => (
+              {accounts.filter(acc => acc.type !== 'summary').map(acc => (
                 <option key={acc.id} value={acc.id}>{acc.name}</option>
               ))}
             </select>
@@ -369,7 +393,11 @@ export default function TransactionList({
       {/* Drawer Overlay for Splits */}
       {activeTx && (
         <div className="split-drawer-overlay" onClick={handleCloseDrawer}>
-          <div className="split-drawer" onClick={(e) => e.stopPropagation()}>
+          <div 
+            className="split-drawer" 
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={handleDrawerKeyDown}
+          >
             
             {/* Drawer Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
@@ -462,8 +490,11 @@ export default function TransactionList({
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
+                            e.stopPropagation();
                             handleSaveInlineCategory(split.id);
                           } else if (e.key === 'Escape') {
+                            e.preventDefault();
+                            e.stopPropagation();
                             setInlineNewCatForSplit(null);
                             setInlineNewCatName('');
                           }
