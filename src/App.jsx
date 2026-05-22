@@ -396,7 +396,7 @@ export default function App() {
                 }}
               >
                 <option value="">-- Select Bank Account --</option>
-                {database.accounts.map(acc => (
+                {database.accounts.filter(acc => acc.type !== 'summary').map(acc => (
                   <option key={acc.id} value={acc.id}>{acc.name} ({acc.bank})</option>
                 ))}
               </select>

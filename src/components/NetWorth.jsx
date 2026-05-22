@@ -6,6 +6,7 @@ import {
 
 export default function NetWorth({ transactions, accounts }) {
   const [hoveredIdx, setHoveredIdx] = useState(null);
+  const [hoveredCell, setHoveredCell] = useState(null); // { date, type, rect, items, isFirstMonth }
 
   // 1. Gather all unique dates to find the earliest history record
   const allDates = [];
@@ -66,9 +67,12 @@ export default function NetWorth({ transactions, accounts }) {
   const monthlyDates = getMonthlyDates(minDate);
 
   // 3. Compute balances for each month start
-  const monthlyData = monthlyDates.map(D => {
+  const monthlyData = monthlyDates.map((D, idx) => {
     let assets = 0;
     let liabilities = 0;
+    const prevD = idx > 0 ? monthlyDates[idx - 1] : null;
+    const assetItems = [];
+    const liabilityItems = [];
 
     accounts.forEach(acc => {
       let balance = 0;
@@ -89,6 +93,43 @@ export default function NetWorth({ transactions, accounts }) {
       } else {
         liabilities += Math.abs(balance);
       }
+
+      let prevBalance = 0;
+      if (prevD) {
+        if (acc.type === 'summary') {
+          const sorted = [...(acc.balances || [])].sort((a, b) => b.date.localeCompare(a.date));
+          const latest = sorted.find(entry => entry.date <= prevD);
+          prevBalance = latest ? latest.balance : 0;
+        } else {
+          prevBalance = transactions
+            .filter(t => t.accountId === acc.id && t.date <= prevD)
+            .reduce((sum, t) => sum + t.amount, 0);
+        }
+      }
+
+      // Check if it's an asset or liability line item
+      if (balance > 0 || (balance === 0 && prevBalance > 0)) {
+        const prevAssetVal = prevBalance > 0 ? prevBalance : 0;
+        assetItems.push({
+          id: acc.id,
+          name: acc.name,
+          bank: acc.bank,
+          balance,
+          change: balance - prevAssetVal
+        });
+      }
+
+      if (balance < 0 || (balance === 0 && prevBalance < 0)) {
+        const currentLiabVal = Math.abs(balance);
+        const prevLiabVal = prevBalance < 0 ? Math.abs(prevBalance) : 0;
+        liabilityItems.push({
+          id: acc.id,
+          name: acc.name,
+          bank: acc.bank,
+          balance: currentLiabVal,
+          change: currentLiabVal - prevLiabVal
+        });
+      }
     });
 
     const netWorth = assets - liabilities;
@@ -96,7 +137,9 @@ export default function NetWorth({ transactions, accounts }) {
       date: D,
       assets,
       liabilities,
-      netWorth
+      netWorth,
+      assetItems,
+      liabilityItems
     };
   });
 
@@ -532,10 +575,50 @@ export default function NetWorth({ transactions, accounts }) {
                 return (
                   <tr key={pt.date}>
                     <td style={{ fontWeight: '600' }}>{formatMonthLabel(pt.date)}</td>
-                    <td style={{ textAlign: 'right', color: 'var(--success)', fontWeight: '500' }}>
+                    <td 
+                      style={{ 
+                        textAlign: 'right', 
+                        color: 'var(--success)', 
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        textDecoration: 'underline dotted rgba(34, 197, 94, 0.3)',
+                        textUnderlineOffset: '4px'
+                      }}
+                      onMouseEnter={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setHoveredCell({
+                          date: pt.date,
+                          type: 'assets',
+                          rect,
+                          items: pt.assetItems,
+                          isFirstMonth: isFirstRow
+                        });
+                      }}
+                      onMouseLeave={() => setHoveredCell(null)}
+                    >
                       {formatCurrency(pt.assets)}
                     </td>
-                    <td style={{ textAlign: 'right', color: 'var(--danger)', fontWeight: '500' }}>
+                    <td 
+                      style={{ 
+                        textAlign: 'right', 
+                        color: 'var(--danger)', 
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        textDecoration: 'underline dotted rgba(220, 38, 38, 0.3)',
+                        textUnderlineOffset: '4px'
+                      }}
+                      onMouseEnter={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setHoveredCell({
+                          date: pt.date,
+                          type: 'liabilities',
+                          rect,
+                          items: pt.liabilityItems,
+                          isFirstMonth: isFirstRow
+                        });
+                      }}
+                      onMouseLeave={() => setHoveredCell(null)}
+                    >
                       {pt.liabilities > 0 ? '-' : ''}{formatCurrency(pt.liabilities)}
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: '700', color: 'var(--text-main)' }}>
@@ -571,6 +654,100 @@ export default function NetWorth({ transactions, accounts }) {
           </table>
         </div>
       </div>
+
+      {/* Floating Detailed Breakdown Tooltip */}
+      {hoveredCell && (
+        <div 
+          style={{
+            position: 'fixed',
+            left: `${hoveredCell.rect.left + hoveredCell.rect.width / 2}px`,
+            top: `${hoveredCell.rect.top - 8}px`,
+            transform: 'translate(-50%, -100%)',
+            pointerEvents: 'none',
+            zIndex: 9999,
+            minWidth: '280px',
+            padding: '0.85rem 1rem',
+            borderRadius: '10px',
+            backgroundColor: 'var(--glass-bg)',
+            backdropFilter: 'var(--glass-blur)',
+            border: '1px solid var(--border-color)',
+            boxShadow: 'var(--shadow-lg)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            fontFamily: 'var(--font-sans)',
+            fontSize: '0.85rem',
+            animation: 'fadeIn 0.15s ease-out'
+          }}
+        >
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
+            <span style={{ fontWeight: '700', color: 'var(--text-main)' }}>
+              {hoveredCell.type === 'assets' ? 'Assets Breakdown' : 'Liabilities Breakdown'}
+            </span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: '500' }}>
+              {formatMonthLabel(hoveredCell.date)}
+            </span>
+          </div>
+
+          {/* List items */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
+            {hoveredCell.items.length === 0 ? (
+              <div style={{ padding: '0.5rem 0', color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.75rem', textAlign: 'center' }}>
+                No active {hoveredCell.type} accounts.
+              </div>
+            ) : (
+              hoveredCell.items.map(item => {
+                let changeColor = 'var(--text-muted)';
+                let changeText = '$0.00';
+
+                if (hoveredCell.isFirstMonth) {
+                  changeColor = 'var(--text-muted)';
+                  changeText = '--';
+                } else {
+                  if (hoveredCell.type === 'assets') {
+                    if (item.change > 0) {
+                      changeColor = 'var(--success)';
+                      changeText = `+${formatCurrency(item.change)}`;
+                    } else if (item.change < 0) {
+                      changeColor = 'var(--danger)';
+                      changeText = `-${formatCurrency(Math.abs(item.change))}`;
+                    }
+                  } else {
+                    // For liabilities
+                    if (item.change > 0) {
+                      // liability went up (red/danger)
+                      changeColor = 'var(--danger)';
+                      changeText = `+${formatCurrency(item.change)}`;
+                    } else if (item.change < 0) {
+                      // liability went down (green/success)
+                      changeColor = 'var(--success)';
+                      changeText = `-${formatCurrency(Math.abs(item.change))}`;
+                    }
+                  }
+                }
+
+                return (
+                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1.25rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                      <span style={{ fontWeight: '500', color: 'var(--text-main)', fontSize: '0.78rem', textAlign: 'left' }}>{item.name}</span>
+                      <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{item.bank}</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '80px' }}>
+                      <span style={{ fontWeight: '600', color: hoveredCell.type === 'assets' ? 'var(--success)' : 'var(--danger)', fontSize: '0.8rem' }}>
+                        {formatCurrency(hoveredCell.type === 'liabilities' ? -item.balance : item.balance)}
+                      </span>
+                      <span style={{ fontSize: '0.68rem', color: changeColor, fontWeight: '500' }}>
+                        {hoveredCell.isFirstMonth ? '' : 'MoM: '}{changeText}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );
