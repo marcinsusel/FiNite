@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   LayoutGrid, Receipt, Landmark, Settings as SettingsIcon, 
   Upload, Cloud, Moon, Sun, AlertTriangle, ShieldCheck, CheckCircle2, Tag,
-  TrendingUp, PiggyBank, History
+  TrendingUp, PiggyBank, History, X
 } from 'lucide-react';
 
 import Dashboard from './components/Dashboard';
@@ -41,6 +41,7 @@ export default function App() {
   // App settings & theme
   const [theme, setTheme] = useState(() => localStorage.getItem('finite-theme') || 'dark');
   const [clientId, setClientId] = useState(() => localStorage.getItem(LOCAL_STORAGE_CLIENT_ID_KEY) || '');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Google Drive states
   const [accessToken, setAccessToken] = useState('');
@@ -177,6 +178,11 @@ export default function App() {
     setSyncError('');
   };
 
+  const handleNavClick = (view) => {
+    setCurrentView(view);
+    setMobileMenuOpen(false);
+  };
+
   // CSV Drag and Drop parsing
   const handleCSVUpload = (e) => {
     const file = e.target.files[0];
@@ -283,6 +289,7 @@ export default function App() {
             transactions={database.transactions}
             accounts={database.accounts}
             categories={database.categories}
+            onNavigate={setCurrentView}
           />
         );
       case 'budget':
@@ -566,12 +573,27 @@ export default function App() {
   return (
     <div className="app-container">
       
+      {/* Backdrop overlay for mobile menu */}
+      <div 
+        className={`mobile-backdrop ${mobileMenuOpen ? 'active' : ''}`} 
+        onClick={() => setMobileMenuOpen(false)} 
+      />
+
       {/* Side Navigation panel */}
-      <aside className="app-sidebar">
+      <aside className={`app-sidebar ${mobileMenuOpen ? 'open' : ''}`}>
         <div>
           <div className="brand-section">
-            <div className="brand-logo">Fi</div>
-            <h1 className="brand-name">FiNite</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className="brand-logo">Fi</div>
+              <h1 className="brand-name">FiNite</h1>
+            </div>
+            <button 
+              className="mobile-close-btn" 
+              onClick={() => setMobileMenuOpen(false)}
+              aria-label="Close menu"
+            >
+              <X size={20} />
+            </button>
           </div>
 
           <nav>
@@ -579,7 +601,7 @@ export default function App() {
               <li>
                 <div 
                   className={`nav-item ${currentView === 'dashboard' ? 'active' : ''}`}
-                  onClick={() => setCurrentView('dashboard')}
+                  onClick={() => handleNavClick('dashboard')}
                 >
                   <LayoutGrid size={18} />
                   <span>Dashboard</span>
@@ -588,7 +610,7 @@ export default function App() {
               <li>
                 <div 
                   className={`nav-item ${currentView === 'net-worth' ? 'active' : ''}`}
-                  onClick={() => setCurrentView('net-worth')}
+                  onClick={() => handleNavClick('net-worth')}
                 >
                   <TrendingUp size={18} />
                   <span>Net Worth</span>
@@ -597,7 +619,7 @@ export default function App() {
               <li>
                 <div 
                   className={`nav-item ${currentView === 'budget' ? 'active' : ''}`}
-                  onClick={() => setCurrentView('budget')}
+                  onClick={() => handleNavClick('budget')}
                 >
                   <PiggyBank size={18} />
                   <span>Budgeting</span>
@@ -606,7 +628,7 @@ export default function App() {
               <li>
                 <div 
                   className={`nav-item ${currentView === 'transactions' ? 'active' : ''}`}
-                  onClick={() => setCurrentView('transactions')}
+                  onClick={() => handleNavClick('transactions')}
                 >
                   <Receipt size={18} />
                   <span>Transactions Log</span>
@@ -615,7 +637,7 @@ export default function App() {
               <li>
                 <div 
                   className={`nav-item ${currentView === 'accounts' ? 'active' : ''}`}
-                  onClick={() => setCurrentView('accounts')}
+                  onClick={() => handleNavClick('accounts')}
                 >
                   <Landmark size={18} />
                   <span>Accounts</span>
@@ -624,7 +646,7 @@ export default function App() {
               <li>
                 <div 
                   className={`nav-item ${currentView === 'categories' ? 'active' : ''}`}
-                  onClick={() => setCurrentView('categories')}
+                  onClick={() => handleNavClick('categories')}
                 >
                   <Tag size={18} />
                   <span>Categories</span>
@@ -633,7 +655,7 @@ export default function App() {
               <li>
                 <div 
                   className={`nav-item ${currentView === 'import-upload' || currentView === 'duplicate-wizard' ? 'active' : ''}`}
-                  onClick={() => setCurrentView('import-upload')}
+                  onClick={() => handleNavClick('import-upload')}
                 >
                   <Upload size={18} />
                   <span>Import Statement</span>
@@ -642,7 +664,7 @@ export default function App() {
               <li>
                 <div 
                   className={`nav-item ${currentView === 'settings' ? 'active' : ''}`}
-                  onClick={() => setCurrentView('settings')}
+                  onClick={() => handleNavClick('settings')}
                 >
                   <SettingsIcon size={18} />
                   <span>Settings</span>
@@ -711,6 +733,17 @@ export default function App() {
 
         <div className="view-container">
           {renderView()}
+        </div>
+
+        {/* Mobile sticky bottom footer bar */}
+        <div className="mobile-footer">
+          <button 
+            className="mobile-brand-trigger" 
+            onClick={() => setMobileMenuOpen(true)}
+            aria-label="Open Navigation Menu"
+          >
+            <div className="mobile-brand-logo">Fi</div>
+          </button>
         </div>
       </main>
 

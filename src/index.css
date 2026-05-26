@@ -570,3 +570,204 @@ tr:hover td {
   width: 100%;
   margin: 1.5rem;
 }
+
+/* Mobile Nav Defaults (Hidden on Desktop) */
+.mobile-close-btn {
+  display: none;
+}
+.mobile-backdrop {
+  display: none;
+}
+.mobile-footer {
+  display: none;
+}
+
+/* Mobile Responsive Overrides */
+@media (max-width: 768px) {
+  /* Layout modifications */
+  .app-container {
+    flex-direction: column;
+    position: relative;
+  }
+
+  /* Hide default sidebar, turn into off-canvas drawer */
+  .app-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    z-index: 12100;
+    transform: translateX(-100%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.35);
+    border-right: 1px solid var(--border-color);
+  }
+
+  .app-sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* Mobile Close Button in Sidebar brand-section */
+  .brand-section {
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .mobile-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .mobile-close-btn:hover {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.1);
+  }
+  [data-theme="light"] .mobile-close-btn {
+    background: rgba(0, 0, 0, 0.03);
+    color: var(--text-muted);
+  }
+  [data-theme="light"] .mobile-close-btn:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--text-main);
+  }
+
+  /* Drawer Backdrop */
+  .mobile-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 12000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .mobile-backdrop.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Main content layout shifts */
+  .main-content {
+    width: 100vw;
+    height: 100vh;
+  }
+
+  /* Header adjustments */
+  .header-bar {
+    padding: 0 1.25rem;
+    height: 60px;
+  }
+
+  /* Leave bottom space for sticky footer */
+  .view-container {
+    padding: 1.25rem;
+    padding-bottom: 96px; /* 64px footer + extra breathing room */
+  }
+
+  /* Sticky Footer layout */
+  .mobile-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background: rgba(10, 10, 15, 0.65);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border-color);
+    z-index: 11000;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.25);
+  }
+  [data-theme="light"] .mobile-footer {
+    background: rgba(240, 240, 245, 0.7);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.04);
+  }
+
+  /* Glowing circular Floating Button */
+  .mobile-brand-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    transform: translateY(-16px);
+    transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-brand-trigger:hover, .mobile-brand-trigger:focus {
+    transform: translateY(-19px) scale(1.06);
+  }
+  .mobile-brand-trigger:active {
+    transform: translateY(-14px) scale(0.92);
+  }
+
+  .mobile-brand-logo {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), hsl(265, 80%, 62%));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.45rem;
+    letter-spacing: -0.02em;
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.45), 0 0 0 4px var(--bg-app);
+    transition: box-shadow 0.25s ease;
+  }
+  .mobile-brand-trigger:hover .mobile-brand-logo {
+    box-shadow: 0 10px 28px rgba(99, 102, 241, 0.6), 0 0 0 5px var(--bg-app);
+  }
+  [data-theme="light"] .mobile-brand-logo {
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3), 0 0 0 4px var(--bg-app);
+  }
+  [data-theme="light"] .mobile-brand-trigger:hover .mobile-brand-logo {
+    box-shadow: 0 10px 28px rgba(99, 102, 241, 0.4), 0 0 0 5px var(--bg-app);
+  }
+}
+
+/* Dashboard Interactive Element Hover States */
+.dashboard-clickable-row {
+  transition: background-color 0.2s ease, transform 0.15s ease;
+}
+.dashboard-clickable-row:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+  transform: translateX(4px);
+}
+[data-theme="light"] .dashboard-clickable-row:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.dashboard-clickable-card {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.dashboard-clickable-card:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+  border-color: var(--border-focus);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+[data-theme="light"] .dashboard-clickable-card:hover {
+  background-color: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.03);
+}

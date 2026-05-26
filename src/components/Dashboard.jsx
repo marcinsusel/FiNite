@@ -1,13 +1,74 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Calendar, Tag } from 'lucide-react';
 
-export default function Dashboard({ transactions, accounts, categories }) {
+export default function Dashboard({ transactions, accounts, categories, onNavigate }) {
   // Extract all unique months (YYYY-MM) from transactions for filtering
   const months = Array.from(
     new Set(transactions.map(t => t.date.substring(0, 7)))
   ).sort((a, b) => b.localeCompare(a)); // Sort latest first
 
-  const [selectedMonth, setSelectedMonth] = useState('all');
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    return months.length > 0 ? months[0] : 'all';
+  });
+
+  // Reset to most recent month if transactions list changes (e.g. from imports)
+  const prevTxLengthRef = useRef(transactions.length);
+  useEffect(() => {
+    if (transactions.length !== prevTxLengthRef.current) {
+      prevTxLengthRef.current = transactions.length;
+      if (months.length > 0) {
+        setSelectedMonth(months[0]);
+      }
+    }
+  }, [transactions, months]);
+
+  const handleCategoryClick = (catId) => {
+    localStorage.setItem('finite_filter_category', catId);
+    localStorage.setItem('finite_filter_account', 'all');
+    localStorage.setItem('finite_filter_reviewed', 'all');
+    localStorage.setItem('finite_filter_search', '');
+    
+    if (selectedMonth && selectedMonth !== 'all') {
+      const year = parseInt(selectedMonth.split('-')[0]);
+      const month = parseInt(selectedMonth.split('-')[1]);
+      const lastDay = new Date(year, month, 0).getDate();
+      const lastDayStr = lastDay < 10 ? `0${lastDay}` : lastDay.toString();
+      
+      localStorage.setItem('finite_filter_start_date', `${selectedMonth}-01`);
+      localStorage.setItem('finite_filter_end_date', `${selectedMonth}-${lastDayStr}`);
+    } else {
+      localStorage.setItem('finite_filter_start_date', '');
+      localStorage.setItem('finite_filter_end_date', '');
+    }
+    
+    if (onNavigate) {
+      onNavigate('transactions');
+    }
+  };
+
+  const handleAccountClick = (accId) => {
+    localStorage.setItem('finite_filter_category', 'all');
+    localStorage.setItem('finite_filter_account', accId);
+    localStorage.setItem('finite_filter_reviewed', 'all');
+    localStorage.setItem('finite_filter_search', '');
+    
+    if (selectedMonth && selectedMonth !== 'all') {
+      const year = parseInt(selectedMonth.split('-')[0]);
+      const month = parseInt(selectedMonth.split('-')[1]);
+      const lastDay = new Date(year, month, 0).getDate();
+      const lastDayStr = lastDay < 10 ? `0${lastDay}` : lastDay.toString();
+      
+      localStorage.setItem('finite_filter_start_date', `${selectedMonth}-01`);
+      localStorage.setItem('finite_filter_end_date', `${selectedMonth}-${lastDayStr}`);
+    } else {
+      localStorage.setItem('finite_filter_start_date', '');
+      localStorage.setItem('finite_filter_end_date', '');
+    }
+    
+    if (onNavigate) {
+      onNavigate('transactions');
+    }
+  };
 
   // Filter transactions by selected month
   const filteredTxs = selectedMonth === 'all' 
@@ -160,7 +221,20 @@ export default function Dashboard({ transactions, accounts, categories }) {
               {categorySpending.map(cat => {
                 const pct = totalSpending > 0 ? (cat.amount / totalSpending) * 100 : 0;
                 return (
-                  <div key={cat.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div 
+                    key={cat.id} 
+                    onClick={() => handleCategoryClick(cat.id)}
+                    className="dashboard-clickable-row"
+                    style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '6px',
+                      cursor: 'pointer',
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: 'var(--radius-sm)',
+                      margin: '0 -0.75rem'
+                    }}
+                  >
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', fontWeight: '500' }}>
                       <span>{cat.name}</span>
                       <span>
@@ -205,8 +279,15 @@ export default function Dashboard({ transactions, accounts, categories }) {
               {accountBalances.map(acc => (
                 <div 
                   key={acc.id} 
-                  className="compare-card" 
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.85rem 1rem' }}
+                  onClick={() => handleAccountClick(acc.id)}
+                  className="compare-card dashboard-clickable-card" 
+                  style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    padding: '0.85rem 1rem',
+                    cursor: 'pointer'
+                  }}
                 >
                   <div>
                     <div style={{ fontWeight: '600', fontSize: '0.95rem' }}>{acc.name}</div>

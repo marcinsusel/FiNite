@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Key, LogOut, CheckCircle, AlertTriangle, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Key, LogOut, CheckCircle, AlertTriangle, ShieldCheck, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { loginToGoogle } from '../utils/googleDriveHelper';
 
 export default function Settings({ 
@@ -13,6 +13,7 @@ export default function Settings({
 }) {
   const [tempId, setTempId] = useState(clientId || '');
   const [copiedId, setCopiedId] = useState(false);
+  const [showClientId, setShowClientId] = useState(false);
 
   const handleSave = (e) => {
     e.preventDefault();
@@ -31,15 +32,41 @@ export default function Settings({
         <div className="form-group">
           <label htmlFor="clientId">Google OAuth Client ID</label>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <input 
-              id="clientId"
-              type="text" 
-              className="input" 
-              placeholder="123456789-abc.apps.googleusercontent.com"
-              value={tempId}
-              onChange={(e) => setTempId(e.target.value)}
-            />
-            <button type="submit" className="btn btn-primary">Save</button>
+            <div style={{ position: 'relative', flexGrow: 1, display: 'flex' }}>
+              <input 
+                id="clientId"
+                type={showClientId ? "text" : "password"} 
+                className="input" 
+                placeholder="123456789-abc.apps.googleusercontent.com"
+                value={tempId}
+                onChange={(e) => setTempId(e.target.value)}
+                style={{ paddingRight: '40px', width: '100%' }}
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowClientId(prev => !prev)}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '4px',
+                  zIndex: 2
+                }}
+                title={showClientId ? "Hide Client ID" : "Show Client ID"}
+              >
+                {showClientId ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            <button type="submit" className="btn btn-primary" style={{ flexShrink: 0 }}>Save</button>
           </div>
           <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
             Enter your Google Cloud Console OAuth 2.0 Web Client ID to enable cloud backups.

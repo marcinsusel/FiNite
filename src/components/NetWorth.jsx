@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, TrendingDown, DollarSign, Wallet, ArrowUpRight, 
   ArrowDownRight, Landmark, Briefcase, ChevronRight, BarChart3, AlertCircle, X
@@ -8,6 +8,12 @@ export default function NetWorth({ transactions, accounts }) {
   const [hoveredIdx, setHoveredIdx] = useState(null);
   const [hoveredCell, setHoveredCell] = useState(null); // { date, type, rect, items, isFirstMonth }
   const [activeModalCell, setActiveModalCell] = useState(null); // { date, type, items, isFirstMonth }
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [transactions.length, accounts.length]);
 
   // 1. Gather all unique dates to find the earliest history record
   const allDates = [];
@@ -568,12 +574,15 @@ export default function NetWorth({ transactions, accounts }) {
               </tr>
             </thead>
             <tbody>
-              {/* Render list in descending chronological order for easier reading */}
-              {[...computedPoints].reverse().map((pt, idx) => {
-                const isPositiveChange = pt.change >= 0;
-                const isFirstRow = pt.date === computedPoints[0].date;
+              {/* Render list in descending chronological order for easier reading, paginated */}
+              {[...computedPoints]
+                .reverse()
+                .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                .map((pt, idx) => {
+                  const isPositiveChange = pt.change >= 0;
+                  const isFirstRow = pt.date === computedPoints[0].date;
 
-                return (
+                  return (
                   <tr key={pt.date}>
                     <td style={{ fontWeight: '600' }}>{formatMonthLabel(pt.date)}</td>
                     <td 
@@ -672,6 +681,31 @@ export default function NetWorth({ transactions, accounts }) {
             </tbody>
           </table>
         </div>
+
+        {/* Dynamic Pagination Controls */}
+        {Math.ceil(computedPoints.length / itemsPerPage) > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.25rem', flexWrap: 'wrap', gap: '10px' }}>
+            <button 
+              className="btn btn-secondary btn-sm" 
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              style={{ minWidth: '80px' }}
+            >
+              Previous
+            </button>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>
+              Month {Math.min((currentPage - 1) * itemsPerPage + 1, computedPoints.length)} – {Math.min(currentPage * itemsPerPage, computedPoints.length)} of {computedPoints.length}
+            </span>
+            <button 
+              className="btn btn-secondary btn-sm" 
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(computedPoints.length / itemsPerPage)))}
+              disabled={currentPage === Math.ceil(computedPoints.length / itemsPerPage)}
+              style={{ minWidth: '80px' }}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Floating Detailed Breakdown Tooltip */}
@@ -786,6 +820,7 @@ export default function NetWorth({ transactions, accounts }) {
             style={{ 
               width: '500px', 
               maxWidth: '90%', 
+              maxHeight: '90vh',
               backgroundColor: 'var(--bg-app)', 
               border: '1px solid var(--border-color)', 
               borderRadius: 'var(--radius-lg)', 
@@ -816,8 +851,8 @@ export default function NetWorth({ transactions, accounts }) {
               </button>
             </div>
 
-            {/* List items in Modal (Spacious, scroll-free layout!) */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* List items in Modal (Scrollable list if it exceeds display size) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', maxHeight: '50vh', paddingRight: '6px' }}>
               {activeModalCell.items.length === 0 ? (
                 <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic' }}>
                   No active {activeModalCell.type} accounts.
