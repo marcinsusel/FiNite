@@ -556,6 +556,7 @@ export default function App() {
         return (
           <DuplicateWizard 
             pendingTransactions={pendingImports}
+            fileName={currentImportMeta?.fileName || 'statement.csv'}
             account={targetAcc}
             categories={database.categories}
             onCompleteImport={handleCompleteImport}

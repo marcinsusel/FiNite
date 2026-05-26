@@ -4,6 +4,7 @@ import { getAutoCategoryId } from '../utils/autoCategorizer';
 
 export default function DuplicateWizard({ 
   pendingTransactions, 
+  fileName,
   account, 
   categories,
   onCompleteImport, 
@@ -39,6 +40,9 @@ export default function DuplicateWizard({
 
     pendingTransactions.forEach(tx => {
       const autoCatId = getAutoCategoryId(tx.description, categories);
+      const rowNum = tx.rowNumber || '?';
+      const defaultNote = `Imported from ${fileName} Row ${rowNum}`;
+
       if (tx.importStatus === 'new') {
         toImport.push({
           id: tx.id,
@@ -53,7 +57,7 @@ export default function DuplicateWizard({
               id: `split_${Math.random().toString(36).substr(2, 9)}`,
               amount: tx.amount,
               categoryId: autoCatId,
-              notes: 'Imported from statement'
+              notes: defaultNote
             }
           ]
         });
@@ -73,7 +77,7 @@ export default function DuplicateWizard({
                 id: `split_${Math.random().toString(36).substr(2, 9)}`,
                 amount: tx.amount,
                 categoryId: autoCatId,
-                notes: 'Imported anyway (conflict override)'
+                notes: `${defaultNote} (conflict override)`
               }
             ]
           });
@@ -93,7 +97,7 @@ export default function DuplicateWizard({
                 id: `split_${Math.random().toString(36).substr(2, 9)}`,
                 amount: tx.amount,
                 categoryId: autoCatId,
-                notes: 'Overwritten from statement'
+                notes: `${defaultNote} (overwritten)`
               }
             ]
           };

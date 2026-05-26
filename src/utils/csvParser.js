@@ -170,7 +170,8 @@ export function parseBankStatement(csvText) {
           amount,
           checkNumber,
           bankType: 'Chase',
-          rawLine: row.join(',')
+          rawLine: row.join(','),
+          rowNumber: i + 1
         });
       }
     } else if (isProsperity) {
@@ -196,7 +197,8 @@ export function parseBankStatement(csvText) {
           amount,
           checkNumber,
           bankType: 'Prosperity',
-          rawLine: row.join(',')
+          rawLine: row.join(','),
+          rowNumber: i + 1
         });
       }
     } else if (isCiti) {
@@ -230,7 +232,8 @@ export function parseBankStatement(csvText) {
           amount,
           checkNumber: '',
           bankType: 'Citi',
-          rawLine: row.join(',')
+          rawLine: row.join(','),
+          rowNumber: i + 1
         });
       }
     } else {
@@ -252,7 +255,8 @@ export function parseBankStatement(csvText) {
             amount: normalizeAmount(row[amtIdx]),
             checkNumber: '',
             bankType: 'Generic',
-            rawLine: row.join(',')
+            rawLine: row.join(','),
+            rowNumber: i + 1
           });
         }
       } else {
