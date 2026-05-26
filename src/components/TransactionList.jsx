@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Filter, Calendar, Search, Edit3, Trash2, Plus, Check, X, AlertCircle } from 'lucide-react';
+import { Filter, Calendar, Search, Edit3, Trash2, Plus, Check, X, AlertCircle, Download } from 'lucide-react';
 
 export default function TransactionList({ 
   transactions, 
@@ -16,6 +16,10 @@ export default function TransactionList({
   const [filterSearch, setFilterSearch] = useState(() => localStorage.getItem('finite_filter_search') || '');
   const [startDate, setStartDate] = useState(() => localStorage.getItem('finite_filter_start_date') || '');
   const [endDate, setEndDate] = useState(() => localStorage.getItem('finite_filter_end_date') || '');
+
+  // Sorting States
+  const [sortField, setSortField] = useState('date');
+  const [sortDirection, setSortDirection] = useState('desc');
 
   React.useEffect(() => {
     localStorage.setItem('finite_filter_account', filterAccount);
@@ -224,6 +228,109 @@ export default function TransactionList({
   const remainingToAllocate = activeTx ? Number((activeTx.amount - currentSplitsTotal).toFixed(2)) : 0;
   const isBalanced = activeTx ? Math.abs(remainingToAllocate) < 0.009 : false;
 
+  // Sorting Handler
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      // Default date and amount to descending, others to ascending
+      setSortDirection(field === 'date' || field === 'amount' ? 'desc' : 'asc');
+    }
+  };
+
+  // Sort Logic
+  const sortedTransactions = [...filteredTransactions].sort((a, b) => {
+    let aVal, bVal;
+
+    switch (sortField) {
+      case 'account':
+        aVal = getAccountName(a.accountId).toLowerCase();
+        bVal = getAccountName(b.accountId).toLowerCase();
+        break;
+      case 'date':
+        aVal = a.date;
+        bVal = b.date;
+        break;
+      case 'description':
+        aVal = a.description.toLowerCase();
+        bVal = b.description.toLowerCase();
+        break;
+      case 'category':
+        aVal = getTransactionCategoriesString(a).toLowerCase();
+        bVal = getTransactionCategoriesString(b).toLowerCase();
+        break;
+      case 'amount':
+        aVal = a.amount;
+        bVal = b.amount;
+        break;
+      case 'reviewed':
+        aVal = a.reviewed ? 1 : 0;
+        bVal = b.reviewed ? 1 : 0;
+        break;
+      default:
+        return 0;
+    }
+
+    if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // Sort Indicator Render
+  const renderSortIndicator = (field) => {
+    if (sortField !== field) return <span style={{ marginLeft: '6px', opacity: 0.35, fontSize: '0.75rem' }}>↕</span>;
+    return sortDirection === 'asc' 
+      ? <span style={{ marginLeft: '6px', color: 'var(--primary)', fontSize: '0.75rem' }}>▲</span> 
+      : <span style={{ marginLeft: '6px', color: 'var(--primary)', fontSize: '0.75rem' }}>▼</span>;
+  };
+
+  // Export Currently Filtered Transactions to CSV
+  const handleExportToCSV = () => {
+    if (sortedTransactions.length === 0) return;
+
+    // 1. Prepare CSV headers
+    const headers = ['Account', 'Date', 'Description', 'Category Distribution', 'Amount', 'Reviewed'];
+
+    // 2. Map transactions to CSV rows
+    const rows = sortedTransactions.map(tx => [
+      getAccountName(tx.accountId),
+      tx.date,
+      tx.description,
+      getTransactionCategoriesString(tx),
+      tx.amount,
+      tx.reviewed ? 'Yes' : 'No'
+    ]);
+
+    // 3. Combine headers and rows with RFC 4180 escaping
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => 
+        row.map(val => {
+          const strVal = String(val === null || val === undefined ? '' : val);
+          if (strVal.includes(',') || strVal.includes('"') || strVal.includes('\n') || strVal.includes('\r')) {
+            return `"${strVal.replace(/"/g, '""')}"`;
+          }
+          return strVal;
+        }).join(',')
+      )
+    ].join('\n');
+
+    // 4. Create Blob and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    const timestamp = new Date().toISOString().substring(0, 10);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `finite_ledger_export_${timestamp}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', flexGrow: 1 }}>
       
@@ -305,6 +412,26 @@ export default function TransactionList({
             />
           </div>
 
+          {/* Export to CSV Button */}
+          <button 
+            onClick={handleExportToCSV}
+            className="btn btn-secondary"
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              padding: '0.45rem 1rem', 
+              fontSize: '0.85rem',
+              height: '38px',
+              marginLeft: 'auto'
+            }}
+            title="Download currently filtered transactions as CSV"
+            disabled={sortedTransactions.length === 0}
+          >
+            <Download size={14} />
+            Export CSV
+          </button>
+
         </div>
       </div>
 
@@ -314,24 +441,36 @@ export default function TransactionList({
           <table>
             <thead>
               <tr>
-                <th>Account</th>
-                <th>Date</th>
-                <th>Description</th>
-                <th>Category Distribution</th>
-                <th>Amount</th>
-                <th style={{ width: '90px', textAlign: 'center' }}>Reviewed</th>
+                <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('account')}>
+                  Account {renderSortIndicator('account')}
+                </th>
+                <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('date')}>
+                  Date {renderSortIndicator('date')}
+                </th>
+                <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('description')}>
+                  Description {renderSortIndicator('description')}
+                </th>
+                <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('category')}>
+                  Category Distribution {renderSortIndicator('category')}
+                </th>
+                <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('amount')}>
+                  Amount {renderSortIndicator('amount')}
+                </th>
+                <th style={{ width: '90px', textAlign: 'center', cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('reviewed')}>
+                  Reviewed {renderSortIndicator('reviewed')}
+                </th>
                 <th style={{ width: '80px', textAlign: 'center' }}>Details</th>
               </tr>
             </thead>
             <tbody>
-              {filteredTransactions.length === 0 ? (
+              {sortedTransactions.length === 0 ? (
                 <tr>
                   <td colSpan="7" style={{ textAlign: 'center', padding: '4rem 1rem', color: 'var(--text-muted)' }}>
                     No transactions match your active filters.
                   </td>
                 </tr>
               ) : (
-                filteredTransactions.map(tx => (
+                sortedTransactions.map(tx => (
                   <tr key={tx.id}>
                     <td>
                       <span style={{ fontSize: '0.8rem', padding: '4px 8px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', fontWeight: '500' }}>

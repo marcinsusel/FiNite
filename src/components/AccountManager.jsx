@@ -93,6 +93,76 @@ export default function AccountManager({ accounts, onSaveAccounts }) {
     }
   };
 
+  const checking = accounts.filter(acc => acc.type === 'checking');
+  const savings = accounts.filter(acc => acc.type === 'savings');
+  const credit = accounts.filter(acc => acc.type === 'credit');
+  const summary = accounts.filter(acc => acc.type === 'summary');
+
+  const renderAccountGroup = (title, groupAccounts) => {
+    if (groupAccounts.length === 0) return null;
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '1.25rem' }}>
+        <h3 style={{ 
+          fontSize: '0.75rem', 
+          textTransform: 'uppercase', 
+          letterSpacing: '0.05em', 
+          color: 'var(--primary)', 
+          fontWeight: '700', 
+          borderBottom: '1px solid var(--border-color)', 
+          paddingBottom: '4px', 
+          marginBottom: '6px',
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center' 
+        }}>
+          <span>{title}</span>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>({groupAccounts.length})</span>
+        </h3>
+        {groupAccounts.map(acc => (
+          <div 
+            key={acc.id} 
+            className="compare-card" 
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1rem', marginBottom: '4px' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ padding: '8px', borderRadius: '6px', backgroundColor: 'rgba(99, 102, 241, 0.08)' }}>
+                {getAccountIcon(acc.type)}
+              </div>
+              <div>
+                <div style={{ fontWeight: '600', fontSize: '0.95rem' }}>{acc.name}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  {acc.type === 'summary' ? 'MANUAL' : `Format: ${acc.bank}`}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {acc.type === 'summary' && (
+                <button 
+                  onClick={() => handleOpenBalancesDrawer(acc)}
+                  className="btn btn-secondary btn-sm"
+                  style={{ padding: '4px 8px', fontSize: '0.75rem', minHeight: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  title="Manage manual balance history"
+                >
+                  <Calendar size={12} />
+                  Balances
+                </button>
+              )}
+              <button 
+                onClick={() => handleDelete(acc.id)} 
+                className="btn btn-secondary btn-sm" 
+                style={{ color: 'var(--danger)', padding: '6px', minHeight: 'auto' }}
+                title="Delete Account"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="grid-cols-2 fade-in">
@@ -176,47 +246,11 @@ export default function AccountManager({ accounts, onSaveAccounts }) {
               <span>No accounts configured yet. Create one on the left to start tracking.</span>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '450px', overflowY: 'auto', paddingRight: '4px' }}>
-              {accounts.map(acc => (
-                <div 
-                  key={acc.id} 
-                  className="compare-card" 
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1rem' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ padding: '8px', borderRadius: '6px', backgroundColor: 'rgba(99, 102, 241, 0.08)' }}>
-                      {getAccountIcon(acc.type)}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: '600', fontSize: '0.95rem' }}>{acc.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        {acc.type === 'summary' ? 'MANUAL' : `Format: ${acc.bank}`} &bull; {acc.type.toUpperCase()}
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    {acc.type === 'summary' && (
-                      <button 
-                        onClick={() => handleOpenBalancesDrawer(acc)}
-                        className="btn btn-secondary btn-sm"
-                        style={{ padding: '4px 8px', fontSize: '0.75rem', minHeight: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}
-                        title="Manage manual balance history"
-                      >
-                        <Calendar size={12} />
-                        Balances
-                      </button>
-                    )}
-                    <button 
-                      onClick={() => handleDelete(acc.id)} 
-                      className="btn btn-secondary btn-sm" 
-                      style={{ color: 'var(--danger)', padding: '6px', minHeight: 'auto' }}
-                      title="Delete Account"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+            <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '480px', overflowY: 'auto', paddingRight: '4px' }}>
+              {renderAccountGroup('Checking Accounts', checking)}
+              {renderAccountGroup('Savings Accounts', savings)}
+              {renderAccountGroup('Credit Cards', credit)}
+              {renderAccountGroup('Summary Accounts (Manual)', summary)}
             </div>
           )}
         </div>

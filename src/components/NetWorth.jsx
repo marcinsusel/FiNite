@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { 
   TrendingUp, TrendingDown, DollarSign, Wallet, ArrowUpRight, 
-  ArrowDownRight, Landmark, Briefcase, ChevronRight, BarChart3, AlertCircle 
+  ArrowDownRight, Landmark, Briefcase, ChevronRight, BarChart3, AlertCircle, X
 } from 'lucide-react';
 
 export default function NetWorth({ transactions, accounts }) {
   const [hoveredIdx, setHoveredIdx] = useState(null);
   const [hoveredCell, setHoveredCell] = useState(null); // { date, type, rect, items, isFirstMonth }
+  const [activeModalCell, setActiveModalCell] = useState(null); // { date, type, items, isFirstMonth }
 
   // 1. Gather all unique dates to find the earliest history record
   const allDates = [];
@@ -595,6 +596,15 @@ export default function NetWorth({ transactions, accounts }) {
                         });
                       }}
                       onMouseLeave={() => setHoveredCell(null)}
+                      onClick={() => {
+                        setHoveredCell(null);
+                        setActiveModalCell({
+                          date: pt.date,
+                          type: 'assets',
+                          items: pt.assetItems,
+                          isFirstMonth: isFirstRow
+                        });
+                      }}
                     >
                       {formatCurrency(pt.assets)}
                     </td>
@@ -618,6 +628,15 @@ export default function NetWorth({ transactions, accounts }) {
                         });
                       }}
                       onMouseLeave={() => setHoveredCell(null)}
+                      onClick={() => {
+                        setHoveredCell(null);
+                        setActiveModalCell({
+                          date: pt.date,
+                          type: 'liabilities',
+                          items: pt.liabilityItems,
+                          isFirstMonth: isFirstRow
+                        });
+                      }}
                     >
                       {pt.liabilities > 0 ? '-' : ''}{formatCurrency(pt.liabilities)}
                     </td>
@@ -665,7 +684,7 @@ export default function NetWorth({ transactions, accounts }) {
             transform: 'translate(-50%, -100%)',
             pointerEvents: 'none',
             zIndex: 9999,
-            minWidth: '280px',
+            minWidth: '320px',
             padding: '0.85rem 1rem',
             borderRadius: '10px',
             backgroundColor: 'var(--glass-bg)',
@@ -682,16 +701,21 @@ export default function NetWorth({ transactions, accounts }) {
         >
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
-            <span style={{ fontWeight: '700', color: 'var(--text-main)' }}>
-              {hoveredCell.type === 'assets' ? 'Assets Breakdown' : 'Liabilities Breakdown'}
-            </span>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: '500' }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontWeight: '700', color: 'var(--text-main)' }}>
+                {hoveredCell.type === 'assets' ? 'Assets Breakdown' : 'Liabilities Breakdown'}
+              </span>
+              <span style={{ fontStyle: 'italic', fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                Click cell to lock open breakdown modal
+              </span>
+            </div>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: '500', alignSelf: 'flex-start' }}>
               {formatMonthLabel(hoveredCell.date)}
             </span>
           </div>
 
-          {/* List items */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
+          {/* List items (Scroll-free!) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {hoveredCell.items.length === 0 ? (
               <div style={{ padding: '0.5rem 0', color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.75rem', textAlign: 'center' }}>
                 No active {hoveredCell.type} accounts.
@@ -745,6 +769,115 @@ export default function NetWorth({ transactions, accounts }) {
                 );
               })
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Spacious Breakdown Modal Overlay (Scroll-free!) */}
+      {activeModalCell && (
+        <div 
+          className="split-drawer-overlay" 
+          onClick={() => setActiveModalCell(null)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}
+        >
+          <div 
+            className="card" 
+            onClick={(e) => e.stopPropagation()}
+            style={{ 
+              width: '500px', 
+              maxWidth: '90%', 
+              backgroundColor: 'var(--bg-app)', 
+              border: '1px solid var(--border-color)', 
+              borderRadius: 'var(--radius-lg)', 
+              padding: '2rem', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '1.5rem',
+              boxShadow: 'var(--shadow-lg)',
+              animation: 'fadeIn 0.2s ease-out'
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.25rem' }}>
+                  {activeModalCell.type === 'assets' ? 'Assets Breakdown' : 'Liabilities Breakdown'}
+                </h3>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  {formatMonthLabel(activeModalCell.date)}
+                </span>
+              </div>
+              <button 
+                onClick={() => setActiveModalCell(null)} 
+                className="btn btn-secondary btn-sm" 
+                style={{ padding: '6px', minHeight: 'auto' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* List items in Modal (Spacious, scroll-free layout!) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {activeModalCell.items.length === 0 ? (
+                <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic' }}>
+                  No active {activeModalCell.type} accounts.
+                </div>
+              ) : (
+                activeModalCell.items.map(item => {
+                  let changeColor = 'var(--text-muted)';
+                  let changeText = '$0.00';
+
+                  if (activeModalCell.isFirstMonth) {
+                    changeColor = 'var(--text-muted)';
+                    changeText = '--';
+                  } else {
+                    if (activeModalCell.type === 'assets') {
+                      if (item.change > 0) {
+                        changeColor = 'var(--success)';
+                        changeText = `+${formatCurrency(item.change)}`;
+                      } else if (item.change < 0) {
+                        changeColor = 'var(--danger)';
+                        changeText = `-${formatCurrency(Math.abs(item.change))}`;
+                      }
+                    } else {
+                      if (item.change > 0) {
+                        changeColor = 'var(--danger)';
+                        changeText = `+${formatCurrency(item.change)}`;
+                      } else if (item.change < 0) {
+                        changeColor = 'var(--success)';
+                        changeText = `-${formatCurrency(Math.abs(item.change))}`;
+                      }
+                    }
+                  }
+
+                  return (
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                      <div>
+                        <div style={{ fontWeight: '600', color: 'var(--text-main)', fontSize: '0.9rem' }}>{item.name}</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{item.bank}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontWeight: '700', color: activeModalCell.type === 'assets' ? 'var(--success)' : 'var(--danger)', fontSize: '0.95rem' }}>
+                          {formatCurrency(activeModalCell.type === 'liabilities' ? -item.balance : item.balance)}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: changeColor, fontWeight: '500' }}>
+                          {activeModalCell.isFirstMonth ? '' : 'MoM: '}{changeText}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <button 
+              onClick={() => setActiveModalCell(null)} 
+              className="btn btn-secondary" 
+              style={{ width: '100%', marginTop: '0.5rem' }}
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
