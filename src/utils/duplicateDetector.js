@@ -1,8 +1,8 @@
 /**
- * Generates a stable, deterministic ID for a transaction based on key details.
- * If the same row is imported, it will generate the same ID.
+ * Generates a stable, deterministic base ID for a transaction based on key details.
+ * Suffix index will be appended separately.
  */
-export function generateTxId(tx, accountId) {
+export function generateBaseTxId(tx, accountId) {
   const desc = (tx.description || '').trim().toLowerCase();
   // Format amount to 2 decimal places to prevent float representation differences
   const amt = Number(tx.amount || 0).toFixed(2);
@@ -19,6 +19,14 @@ export function generateTxId(tx, accountId) {
   // Add date prefix for easier sorting/filtering if raw ID is logged
   const dateStr = date.replace(/-/g, '');
   return `tx_${Math.abs(hash).toString(36)}_${dateStr}`;
+}
+
+/**
+ * Generates a stable, deterministic ID for a transaction with occurrence index suffix.
+ */
+export function generateTxId(tx, accountId, index = 0) {
+  const baseId = generateBaseTxId(tx, accountId);
+  return `${baseId}_${index}`;
 }
 
 /**
@@ -83,9 +91,16 @@ export function getDayDifference(dateStr1, dateStr2) {
 export function detectDuplicates(importedTxs, existingTxs, accountId) {
   let hasDuplicates = false;
 
+  const seenIndices = {};
+
   const annotated = importedTxs.map(newTx => {
-    // Generate stable ID
-    const txId = generateTxId(newTx, accountId);
+    // Count occurrence indices of this transaction key in current import batch
+    const baseId = generateBaseTxId(newTx, accountId);
+    const occurrenceIndex = seenIndices[baseId] || 0;
+    seenIndices[baseId] = occurrenceIndex + 1;
+    
+    // Generate stable ID with occurrence index suffix
+    const txId = `${baseId}_${occurrenceIndex}`;
     
     // 1. Exact match check
     const exactMatch = existingTxs.find(ext => ext.id === txId);
@@ -135,4 +150,43 @@ export function detectDuplicates(importedTxs, existingTxs, accountId) {
   });
 
   return { transactions: annotated, hasDuplicates };
+}
+
+/**
+ * Migration utility: Re-calculates IDs for all non-opening-balance transactions,
+ * ordering them chronologically to guarantee correct occurrence indices (_0, _1, etc.)
+ */
+export function migrateTransactions(transactions) {
+  if (!transactions || !Array.isArray(transactions)) return [];
+  
+  // Sort chronologically (oldest first) to assign indices in chronological order
+  const sorted = [...transactions].sort((a, b) => {
+    const dateCompare = (a.date || '').localeCompare(b.date || '');
+    if (dateCompare !== 0) return dateCompare;
+    return 0; // maintain relative order
+  });
+
+  const seenCounts = {};
+
+  const migrated = sorted.map(tx => {
+    if (tx.description === 'OPENING BALANCE BY FINITE') {
+      return tx;
+    }
+    
+    const baseId = generateBaseTxId(tx, tx.accountId);
+    const count = seenCounts[baseId] || 0;
+    seenCounts[baseId] = count + 1;
+    
+    const newId = `${baseId}_${count}`;
+
+    return {
+      ...tx,
+      id: newId
+    };
+  });
+
+  // Re-sort to original order (date descending)
+  migrated.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+  return migrated;
 }

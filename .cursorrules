@@ -1,0 +1,31 @@
+# FiNite Workspace AI Instructions (.cursorrules)
+
+Welcome to **FiNite**, a premium, clientside financial dashboard built with **Vite, React, and Vanilla CSS**. This file provides context, rules, and guidelines for AI interactions to maintain high-quality code, database integrity, and premium styling.
+
+## 1. Technology Stack & Design System
+* **Framework**: React (Vite-powered, ES Modules, clean JSX structure).
+* **Styling**: Vanilla CSS only (defined in `src/index.css`). **Never use TailwindCSS** or styled-components unless explicitly requested.
+* **Aesthetics**: Glassmorphism, harmonious HSL color scales (e.g., `var(--primary)`, `var(--success)`, `var(--danger)`), subtle glowing borders, rotating chevrons, and micro-animations on hover/transitions.
+* **Typography & Icons**: Custom font faces from Google Fonts (Outfit, Inter) and `lucide-react` for all vector icon assets.
+* **Page Layout**: Fully responsive, glass-card grid containers with soft blurs, overlays, and side drawers.
+
+## 2. Core Modules & Architecture
+* **App.jsx**: The orchestrator of global state. Manages the centralized `database` object containing `accounts`, `transactions`, `categories`, and `settings`.
+* **State Management**: Persists local configurations and statements to browser `localStorage` and synchronizes with **Google Drive Cloud storage** via `googleDriveHelper.js`.
+* **AccountManager.jsx**: Manages checking, savings, credit, and manual summary accounts. Incorporates the **Account History Ledger** and manual balance forms in the settings drawer.
+* **DuplicateWizard.jsx & DuplicateDetector.js**: Resolves CSV import duplicates. Applies fuzzy and exact matching. Uses occurrence-index suffixed transaction IDs (`_0`, `_1`, etc.) to prevent collisions of identical daily rows.
+* **NetWorth.jsx**: Consolidates assets, liabilities, and cumulative wealth trends. Evaluates balances as of the **end of each month** (`YYYY-MM-DD`) to capture complete transactions and match current ledger lists.
+* **Dashboard.jsx**: Renders category outflow bars, net cash flows, and monthly financial summaries.
+* **TransactionList.jsx**: Embeds advanced filter controls, query search, split allocation drawers, and inline review tags.
+
+## 3. Database Integrity & ID Rules
+* **Transaction IDs**: All statement-parsed transaction IDs must be generated via `generateTxId` in `duplicateDetector.js` using deterministic occurrence-indexed suffix hashes: `[base_hash]_[occurrence_index]` (e.g., `tx_abc123_0`).
+* **Migrations**: Any database loader must intercept historical records and run `migrateTransactions` from `duplicateDetector.js` on first load to preserve transaction splits and history entries.
+* **Reconciliation Entries**: The `'OPENING BALANCE BY FINITE'` entry is a locked reconciliation transaction. It must never display deletion buttons, and its calculations must be rounded to exactly two decimal places using `Math.round(val * 100) / 100` to prevent floating-point inaccuracies.
+* **Generic CSV Parsing**: If an account uses generic mapping with `reverseAmounts: true`, transaction and split signs must be inverted (`-amount`) during ingestion *before* deduplication occurs.
+
+## 4. Coding & Behavior Guidelines
+* **Keep Code Clean**: Maintain functional programming patterns, hooks, and clean state setters.
+* **No Placeholders**: Always write fully working, complete features. Never insert `// TODO` or placeholder elements.
+* **Preserve Unrelated Code**: Retain all existing documentation, comments, hooks, and helpers that are unrelated to your active changes.
+* **Aesthetic Excellence**: If your visual component or animation looks plain, basic, or unaligned with our glassmorphic HSL styling, iterate and upgrade it to look premium.

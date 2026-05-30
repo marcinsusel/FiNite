@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, TrendingDown, DollarSign, Wallet, ArrowUpRight, 
-  ArrowDownRight, Landmark, Briefcase, ChevronRight, BarChart3, AlertCircle, X
+  ArrowDownRight, Landmark, Briefcase, ChevronRight, ChevronDown, BarChart3, AlertCircle, X, ExternalLink
 } from 'lucide-react';
 
 export default function NetWorth({ transactions, accounts }) {
@@ -9,6 +9,7 @@ export default function NetWorth({ transactions, accounts }) {
   const [hoveredCell, setHoveredCell] = useState(null); // { date, type, rect, items, isFirstMonth }
   const [activeModalCell, setActiveModalCell] = useState(null); // { date, type, items, isFirstMonth }
   const [currentPage, setCurrentPage] = useState(1);
+  const [expandedSection, setExpandedSection] = useState(null); // 'assets' | 'liabilities' | null
   const itemsPerPage = 6;
 
   useEffect(() => {
@@ -53,7 +54,9 @@ export default function NetWorth({ transactions, accounts }) {
 
     while (y < currentYear || (y === currentYear && m <= currentMonth)) {
       const mm = String(m + 1).padStart(2, '0');
-      result.push(`${y}-${mm}-01`);
+      const lastDay = new Date(y, m + 1, 0).getDate();
+      const dd = String(lastDay).padStart(2, '0');
+      result.push(`${y}-${mm}-${dd}`);
       m++;
       if (m > 11) {
         m = 0;
@@ -62,7 +65,8 @@ export default function NetWorth({ transactions, accounts }) {
     }
     
     // Ensure we have at least the current month
-    const currentMonthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
+    const currentMonthLastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const currentMonthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(currentMonthLastDay).padStart(2, '0')}`;
     if (result.length === 0 || !result.includes(currentMonthStr)) {
       if (!result.includes(currentMonthStr)) {
         result.push(currentMonthStr);
@@ -121,6 +125,7 @@ export default function NetWorth({ transactions, accounts }) {
           id: acc.id,
           name: acc.name,
           bank: acc.bank,
+          url: acc.url,
           balance,
           change: balance - prevAssetVal
         });
@@ -133,6 +138,7 @@ export default function NetWorth({ transactions, accounts }) {
           id: acc.id,
           name: acc.name,
           bank: acc.bank,
+          url: acc.url,
           balance: currentLiabVal,
           change: currentLiabVal - prevLiabVal
         });
@@ -301,9 +307,33 @@ export default function NetWorth({ transactions, accounts }) {
         </div>
 
         {/* Total Assets Card */}
-        <div className="card stat-card" style={{ borderLeft: '4px solid var(--success)' }}>
+        <div 
+          className="card stat-card" 
+          onClick={() => setExpandedSection(prev => prev === 'assets' ? null : 'assets')}
+          style={{ 
+            borderLeft: '4px solid var(--success)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            transform: expandedSection === 'assets' ? 'translateY(-2px)' : 'none',
+            boxShadow: expandedSection === 'assets' 
+              ? '0 6px 20px rgba(34, 197, 94, 0.15)' 
+              : 'var(--shadow-lg)',
+            backgroundColor: expandedSection === 'assets' ? 'rgba(34, 197, 94, 0.04)' : 'var(--bg-card)',
+            borderColor: expandedSection === 'assets' ? 'var(--success)' : 'var(--border-color)'
+          }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Total Assets</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              Total Assets
+              <ChevronDown 
+                size={14} 
+                style={{ 
+                  transform: expandedSection === 'assets' ? 'rotate(180deg)' : 'none', 
+                  transition: 'transform 0.2s ease',
+                  color: expandedSection === 'assets' ? 'var(--success)' : 'var(--text-muted)'
+                }} 
+              />
+            </span>
             <div style={{ padding: '6px', borderRadius: '50%', backgroundColor: 'rgba(34, 197, 94, 0.08)', color: 'var(--success)' }}>
               <Landmark size={18} />
             </div>
@@ -315,9 +345,33 @@ export default function NetWorth({ transactions, accounts }) {
         </div>
 
         {/* Total Liabilities Card */}
-        <div className="card stat-card" style={{ borderLeft: '4px solid var(--danger)' }}>
+        <div 
+          className="card stat-card" 
+          onClick={() => setExpandedSection(prev => prev === 'liabilities' ? null : 'liabilities')}
+          style={{ 
+            borderLeft: '4px solid var(--danger)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            transform: expandedSection === 'liabilities' ? 'translateY(-2px)' : 'none',
+            boxShadow: expandedSection === 'liabilities' 
+              ? '0 6px 20px rgba(220, 38, 38, 0.15)' 
+              : 'var(--shadow-lg)',
+            backgroundColor: expandedSection === 'liabilities' ? 'rgba(220, 38, 38, 0.04)' : 'var(--bg-card)',
+            borderColor: expandedSection === 'liabilities' ? 'var(--danger)' : 'var(--border-color)'
+          }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Total Liabilities</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              Total Liabilities
+              <ChevronDown 
+                size={14} 
+                style={{ 
+                  transform: expandedSection === 'liabilities' ? 'rotate(180deg)' : 'none', 
+                  transition: 'transform 0.2s ease',
+                  color: expandedSection === 'liabilities' ? 'var(--danger)' : 'var(--text-muted)'
+                }} 
+              />
+            </span>
             <div style={{ padding: '6px', borderRadius: '50%', backgroundColor: 'rgba(220, 38, 38, 0.08)', color: 'var(--danger)' }}>
               <Briefcase size={18} style={{ transform: 'rotate(180deg)' }} />
             </div>
@@ -349,6 +403,147 @@ export default function NetWorth({ transactions, accounts }) {
           </span>
         </div>
       </div>
+
+      {/* Expanded Asset or Liability Details Section */}
+      {expandedSection && (
+        <div 
+          className="card fade-in" 
+          style={{ 
+            borderLeft: `4px solid ${expandedSection === 'assets' ? 'var(--success)' : 'var(--danger)'}`,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem',
+            animation: 'fadeIn 0.25s ease-out',
+            backgroundColor: 'var(--glass-bg)',
+            backdropFilter: 'var(--glass-blur)'
+          }}
+        >
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {expandedSection === 'assets' ? (
+                  <>
+                    <Landmark size={20} style={{ color: 'var(--success)' }} />
+                    Active Assets Breakdown
+                  </>
+                ) : (
+                  <>
+                    <Briefcase size={20} style={{ color: 'var(--danger)', transform: 'rotate(180deg)' }} />
+                    Active Liabilities Breakdown
+                  </>
+                )}
+              </h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '2px' }}>
+                All individual accounts comprising your {expandedSection} for {formatMonthLabel(latestData.date)} in decreasing amount order.
+              </p>
+            </div>
+            <button 
+              onClick={() => setExpandedSection(null)} 
+              className="btn btn-secondary btn-sm" 
+              style={{ padding: '6px', minHeight: 'auto' }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* Table Container */}
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Account Name</th>
+                  <th>Bank / Institution</th>
+                  <th style={{ textAlign: 'right' }}>Current Balance</th>
+                  <th style={{ textAlign: 'right' }}>MoM Change</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(expandedSection === 'assets'
+                  ? [...(latestData.assetItems || [])].sort((a, b) => b.balance - a.balance)
+                  : [...(latestData.liabilityItems || [])].sort((a, b) => b.balance - a.balance)
+                ).map(item => {
+                  let changeColor = 'var(--text-muted)';
+                  let changeText = '$0.00';
+                  const isFirstRow = latestData.date === computedPoints[0].date;
+
+                  if (isFirstRow) {
+                    changeColor = 'var(--text-muted)';
+                    changeText = '--';
+                  } else {
+                    if (expandedSection === 'assets') {
+                      if (item.change > 0) {
+                        changeColor = 'var(--success)';
+                        changeText = `+${formatCurrency(item.change)}`;
+                      } else if (item.change < 0) {
+                        changeColor = 'var(--danger)';
+                        changeText = `-${formatCurrency(Math.abs(item.change))}`;
+                      }
+                    } else {
+                      if (item.change > 0) {
+                        changeColor = 'var(--danger)';
+                        changeText = `+${formatCurrency(item.change)}`;
+                      } else if (item.change < 0) {
+                        changeColor = 'var(--success)';
+                        changeText = `-${formatCurrency(Math.abs(item.change))}`;
+                      }
+                    }
+                  }
+
+                  return (
+                    <tr key={item.id}>
+                      <td style={{ fontWeight: '600', color: 'var(--text-main)' }}>
+                        {item.url ? (
+                          <a 
+                            href={item.url.startsWith('http') ? item.url : `https://${item.url}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            style={{ 
+                              fontWeight: '600', 
+                              color: 'var(--primary)', 
+                              textDecoration: 'underline dotted rgba(99, 102, 241, 0.4)',
+                              textUnderlineOffset: '3px',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                            title={`Open ${item.url} in new window`}
+                          >
+                            {item.name}
+                            <ExternalLink size={12} style={{ opacity: 0.7 }} />
+                          </a>
+                        ) : (
+                          item.name
+                        )}
+                      </td>
+                      <td style={{ color: 'var(--text-muted)' }}>{item.bank}</td>
+                      <td 
+                        style={{ 
+                          textAlign: 'right', 
+                          fontWeight: '700', 
+                          color: expandedSection === 'assets' ? 'var(--success)' : 'var(--danger)' 
+                        }}
+                      >
+                        {formatCurrency(expandedSection === 'liabilities' ? -item.balance : item.balance)}
+                      </td>
+                      <td 
+                        style={{ 
+                          textAlign: 'right', 
+                          fontWeight: '600', 
+                          color: changeColor 
+                        }}
+                      >
+                        {changeText}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* SVG Line Chart Card */}
       <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -755,7 +950,7 @@ export default function NetWorth({ transactions, accounts }) {
                 No active {hoveredCell.type} accounts.
               </div>
             ) : (
-              hoveredCell.items.map(item => {
+              [...hoveredCell.items].sort((a, b) => b.balance - a.balance).map(item => {
                 let changeColor = 'var(--text-muted)';
                 let changeText = '$0.00';
 
@@ -858,7 +1053,7 @@ export default function NetWorth({ transactions, accounts }) {
                   No active {activeModalCell.type} accounts.
                 </div>
               ) : (
-                activeModalCell.items.map(item => {
+                [...activeModalCell.items].sort((a, b) => b.balance - a.balance).map(item => {
                   let changeColor = 'var(--text-muted)';
                   let changeText = '$0.00';
 

@@ -1,0 +1,15 @@
+# FiNite Workspace AI Rules (.clinerules)
+
+This file instructs Cline and other workspace agents on development protocols, database specifications, and styling definitions unique to the **FiNite** project.
+
+## Development Workflow & Rules
+1. **Analyze First**: Before writing any code, search the codebase (`src/components/`, `src/utils/`) to locate established hooks, state structures, and CSS HSL utility variables.
+2. **Vanilla CSS Styling**: Use custom HSL tokens, glassmorphism, blurs, and scale transitions. **Do not use TailwindCSS**.
+3. **No Unfinished Blocks**: Deliver complete, production-ready code. Do not write mock implementations or placeholder sections.
+4. **Stable Testing**: Ensure modifications pass the test suite: `node src/utils/__tests__/testCSVAndDuplicates.js`.
+
+## Central Specifications
+* **End-of-Month Evaluators**: Net Worth timeline increments are evaluated at the **last day of each month** (`YYYY-MM-DD`) to ensure transaction summaries match **Your Accounts** balances.
+* **Stable ID Mappings**: Transaction hashing must incorporate occurrence indices (e.g. `_0`, `_1`) via `duplicateDetector.js` to support identical daily transaction rows.
+* **Opening Balance Locks**: `'OPENING BALANCE BY FINITE'` is a locked ledger transaction and must not show deletion options.
+* **Auto-Rounding**: Always apply `Math.round(val * 100) / 100` to reconciliation calculations to prevent float inaccuracies.

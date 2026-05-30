@@ -15,7 +15,7 @@ import NetWorth from './components/NetWorth';
 import BudgetManager from './components/BudgetManager';
 
 import { parseBankStatement } from './utils/csvParser';
-import { detectDuplicates } from './utils/duplicateDetector';
+import { detectDuplicates, migrateTransactions } from './utils/duplicateDetector';
 import { initOAuthClient, syncAndLoadDatabase, saveDatabaseToDrive } from './utils/googleDriveHelper';
 import { getAutoCategoryId } from './utils/autoCategorizer';
 
@@ -52,7 +52,14 @@ export default function App() {
   // Main Database State
   const [database, setDatabase] = useState(() => {
     const cached = localStorage.getItem(LOCAL_STORAGE_DB_KEY);
-    return cached ? JSON.parse(cached) : DEFAULT_DB;
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed.transactions && parsed.transactions.length > 0) {
+        parsed.transactions = migrateTransactions(parsed.transactions);
+      }
+      return parsed;
+    }
+    return DEFAULT_DB;
   });
 
   // Navigation: 'dashboard' | 'transactions' | 'accounts' | 'settings' | 'import-upload' | 'duplicate-wizard'
@@ -107,8 +114,12 @@ export default function App() {
         setDbFileId(fileId);
         
         // Merge cloud data with local data, prioritizing cloud data
-        setDatabase(data);
-        localStorage.setItem(LOCAL_STORAGE_DB_KEY, JSON.stringify(data));
+        const migratedData = {
+          ...data,
+          transactions: migrateTransactions(data.transactions || [])
+        };
+        setDatabase(migratedData);
+        localStorage.setItem(LOCAL_STORAGE_DB_KEY, JSON.stringify(migratedData));
         setSyncState('Saved');
       } catch (err) {
         setSyncError('Load error: ' + err.message);
@@ -208,17 +219,26 @@ export default function App() {
         return;
       }
 
+      const targetAccount = database.accounts.find(a => a.id === selectedAccountId);
+      let processedParsed = parsed;
+      if (bank === 'Generic' && targetAccount && targetAccount.reverseAmounts === true) {
+        processedParsed = parsed.map(tx => ({
+          ...tx,
+          amount: -tx.amount
+        }));
+      }
+
       // Check duplicates
       const { transactions: annotated, hasDuplicates } = detectDuplicates(
-        parsed,
+        processedParsed,
         database.transactions,
         selectedAccountId
       );
 
       // Extract time range
       let timeRange = 'N/A';
-      if (parsed.length > 0) {
-        const dates = parsed.map(tx => tx.date).filter(Boolean).sort();
+      if (processedParsed.length > 0) {
+        const dates = processedParsed.map(tx => tx.date).filter(Boolean).sort();
         if (dates.length > 0) {
           timeRange = `${dates[0]} to ${dates[dates.length - 1]}`;
         }
@@ -228,7 +248,7 @@ export default function App() {
         fileName: file.name,
         bank,
         timeRange,
-        count: parsed.length
+        count: processedParsed.length
       });
 
       setPendingImports(annotated);
@@ -344,10 +364,32 @@ export default function App() {
         return (
           <AccountManager 
             accounts={database.accounts}
+            transactions={database.transactions}
             onSaveAccounts={(updatedAccounts) => {
               setDatabase(prev => ({
                 ...prev,
                 accounts: updatedAccounts
+              }));
+            }}
+            onDeleteAccount={(accountId) => {
+              setDatabase(prev => ({
+                ...prev,
+                accounts: prev.accounts.filter(acc => acc.id !== accountId),
+                transactions: prev.transactions.filter(t => t.accountId !== accountId)
+              }));
+            }}
+            onDeleteTransaction={(id) => {
+              setDatabase(prev => ({
+                ...prev,
+                transactions: prev.transactions.filter(t => t.id !== id)
+              }));
+            }}
+            onUpdateTransaction={(updated) => {
+              setDatabase(prev => ({
+                ...prev,
+                transactions: prev.transactions.some(t => t.id === updated.id)
+                  ? prev.transactions.map(t => t.id === updated.id ? updated : t)
+                  : [updated, ...prev.transactions]
               }));
             }}
           />
@@ -556,6 +598,7 @@ export default function App() {
         return (
           <DuplicateWizard 
             pendingTransactions={pendingImports}
+            databaseTransactions={database.transactions}
             fileName={currentImportMeta?.fileName || 'statement.csv'}
             account={targetAcc}
             categories={database.categories}

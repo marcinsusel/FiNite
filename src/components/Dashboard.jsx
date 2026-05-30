@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Calendar, Tag } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Calendar, Tag, ExternalLink } from 'lucide-react';
 
 export default function Dashboard({ transactions, accounts, categories, onNavigate }) {
   // Extract all unique months (YYYY-MM) from transactions for filtering
@@ -290,7 +290,31 @@ export default function Dashboard({ transactions, accounts, categories, onNaviga
                   }}
                 >
                   <div>
-                    <div style={{ fontWeight: '600', fontSize: '0.95rem' }}>{acc.name}</div>
+                    {acc.url ? (
+                      <a 
+                        href={acc.url.startsWith('http') ? acc.url : `https://${acc.url}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ 
+                          fontWeight: '600', 
+                          fontSize: '0.95rem', 
+                          color: 'var(--primary)', 
+                          textDecoration: 'underline dotted rgba(99, 102, 241, 0.4)',
+                          textUnderlineOffset: '3px',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                        title={`Open ${acc.url} in new window`}
+                      >
+                        {acc.name}
+                        <ExternalLink size={12} style={{ opacity: 0.7 }} />
+                      </a>
+                    ) : (
+                      <div style={{ fontWeight: '600', fontSize: '0.95rem' }}>{acc.name}</div>
+                    )}
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Format: {acc.bank}</div>
                   </div>
                   <div 

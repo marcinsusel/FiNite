@@ -771,3 +771,153 @@ tr:hover td {
   background-color: rgba(255, 255, 255, 0.8);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.03);
 }
+
+/* Interactive Account Deletion Modal */
+.confirm-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1.5rem;
+  animation: fadeInConfirm 0.25s ease-out;
+}
+
+.confirm-modal-card {
+  width: 100%;
+  max-width: 650px;
+  background: var(--bg-app);
+  border: 1px solid rgba(239, 68, 68, 0.25); /* Subtle warning red border */
+  border-radius: var(--radius-md);
+  padding: 2rem;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5), 0 0 30px rgba(239, 68, 68, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: scaleInConfirm 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme="light"] .confirm-modal-card {
+  background: var(--bg-card);
+  border-color: rgba(239, 68, 68, 0.3);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.15), 0 0 30px rgba(239, 68, 68, 0.03);
+}
+
+.warning-banner {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  color: var(--danger);
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+[data-theme="light"] .warning-banner {
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.confirm-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+}
+
+[data-theme="light"] .confirm-details-grid {
+  background: rgba(0, 0, 0, 0.01);
+}
+
+.confirm-details-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.confirm-details-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+
+.confirm-details-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.confirm-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.confirm-stat-card {
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+  text-align: center;
+}
+
+.confirm-stat-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.confirm-stat-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.confirm-tx-list {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  max-height: 180px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .confirm-tx-list {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.confirm-tx-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 100px;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+  align-items: center;
+  font-size: 0.8rem;
+}
+
+.confirm-tx-row:last-child {
+  border-bottom: none;
+}
+
+@keyframes fadeInConfirm {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleInConfirm {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}

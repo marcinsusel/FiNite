@@ -30,6 +30,22 @@ export default function TransactionList({
     localStorage.setItem('finite_filter_end_date', endDate);
   }, [filterAccount, filterCategory, filterReviewed, filterSearch, startDate, endDate]);
 
+  const handleClearFilters = () => {
+    setFilterAccount('all');
+    setFilterCategory('all');
+    setFilterReviewed('all');
+    setFilterSearch('');
+    setStartDate('');
+    setEndDate('');
+  };
+
+  const isFilterActive = filterAccount !== 'all' || 
+                         filterCategory !== 'all' || 
+                         filterReviewed !== 'all' || 
+                         filterSearch !== '' || 
+                         startDate !== '' || 
+                         endDate !== '';
+
   // Active Transaction for Split Drawer
   const [activeTx, setActiveTx] = useState(null);
   const [tempSplits, setTempSplits] = useState([]);
@@ -412,6 +428,30 @@ export default function TransactionList({
             />
           </div>
 
+          {/* Clear Filters Button */}
+          {isFilterActive && (
+            <button 
+              onClick={handleClearFilters}
+              className="btn btn-secondary fade-in"
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '6px', 
+                padding: '0.45rem 1rem', 
+                fontSize: '0.85rem',
+                height: '38px',
+                color: 'var(--danger)',
+                borderColor: 'rgba(239, 68, 68, 0.15)',
+                backgroundColor: 'rgba(239, 68, 68, 0.03)',
+                marginLeft: 'auto'
+              }}
+              title="Reset and clear all transaction filters"
+            >
+              <X size={14} />
+              Clear Filters
+            </button>
+          )}
+
           {/* Export to CSV Button */}
           <button 
             onClick={handleExportToCSV}
@@ -423,7 +463,7 @@ export default function TransactionList({
               padding: '0.45rem 1rem', 
               fontSize: '0.85rem',
               height: '38px',
-              marginLeft: 'auto'
+              marginLeft: !isFilterActive ? 'auto' : '0'
             }}
             title="Download currently filtered transactions as CSV"
             disabled={sortedTransactions.length === 0}

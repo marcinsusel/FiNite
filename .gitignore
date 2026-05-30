@@ -33,3 +33,4 @@ pnpm-debug.log*
 
 #Test data
 /csv
+/tmp
