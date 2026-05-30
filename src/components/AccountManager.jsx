@@ -1,6 +1,58 @@
 import React, { useState } from 'react';
 import { Landmark, Plus, Trash2, CreditCard, PiggyBank, Receipt, Briefcase, Calendar, X, Edit2, ExternalLink } from 'lucide-react';
 
+const addMonths = (dateStr, months) => {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString().split('T')[0];
+};
+
+const generateLoanBalances = (startingDate, startingBalance, apr, lengthMonths) => {
+  const balances = [];
+  const P = parseFloat(startingBalance);
+  const aprVal = parseFloat(apr);
+  const length = parseInt(lengthMonths, 10);
+  const r = aprVal / 100 / 12;
+
+  let monthlyPayment = 0;
+  if (aprVal === 0 || r === 0) {
+    monthlyPayment = P / length;
+  } else {
+    monthlyPayment = P * (r * Math.pow(1 + r, length)) / (Math.pow(1 + r, length) - 1);
+  }
+
+  let remainingPrincipal = P;
+
+  // Month 0
+  balances.push({
+    id: `bal_init_${Math.random().toString(36).substr(2, 9)}`,
+    date: startingDate,
+    balance: -Number(remainingPrincipal.toFixed(2)) // Loan balance is negative liability
+  });
+
+  // Month 1 to length
+  for (let k = 1; k <= length; k++) {
+    if (k === length) {
+      remainingPrincipal = 0;
+    } else {
+      const interestAdded = remainingPrincipal * r;
+      remainingPrincipal = remainingPrincipal * (1 + r) - monthlyPayment;
+      if (remainingPrincipal < 0) remainingPrincipal = 0;
+    }
+
+    balances.push({
+      id: `bal_${k}_${Math.random().toString(36).substr(2, 9)}`,
+      date: addMonths(startingDate, k),
+      balance: -Number(remainingPrincipal.toFixed(2))
+    });
+  }
+
+  return {
+    monthlyPayment,
+    balances
+  };
+};
+
 export default function AccountManager({ accounts, onSaveAccounts, transactions = [], onDeleteTransaction, onUpdateTransaction, onDeleteAccount }) {
   const [name, setName] = useState('');
   const [bank, setBank] = useState('Chase');
@@ -27,9 +79,46 @@ export default function AccountManager({ accounts, onSaveAccounts, transactions 
   const [newBalanceDate, setNewBalanceDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [newBalanceValue, setNewBalanceValue] = useState('');
 
+  // Loan Account States
+  const [loanStartingDate, setLoanStartingDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [loanStartingBalance, setLoanStartingBalance] = useState('');
+  const [loanApr, setLoanApr] = useState('0');
+  const [loanLength, setLoanLength] = useState('12');
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!name.trim()) return;
+
+    if (type === 'loan') {
+      const { monthlyPayment, balances } = generateLoanBalances(
+        loanStartingDate,
+        loanStartingBalance,
+        loanApr,
+        loanLength
+      );
+
+      const newAccount = {
+        id: `acc_${Math.random().toString(36).substr(2, 9)}`,
+        name: name.trim(),
+        bank: 'Loan',
+        type,
+        url: url.trim(),
+        startingDate: loanStartingDate,
+        startingBalance: parseFloat(loanStartingBalance),
+        apr: parseFloat(loanApr),
+        lengthMonths: parseInt(loanLength, 10),
+        monthlyPayment,
+        balances
+      };
+
+      onSaveAccounts([...accounts, newAccount]);
+      setName('');
+      setUrl('');
+      setLoanStartingBalance('');
+      setLoanApr('0');
+      setLoanLength('12');
+      return;
+    }
 
     const newAccount = {
       id: `acc_${Math.random().toString(36).substr(2, 9)}`,
@@ -257,11 +346,32 @@ export default function AccountManager({ accounts, onSaveAccounts, transactions 
     setActiveAcc(updatedAccount);
   };
 
+  const handleUpdateLoanStartingDate = (newDate) => {
+    if (!newDate) return;
+    const { monthlyPayment, balances } = generateLoanBalances(
+      newDate,
+      activeAcc.startingBalance,
+      activeAcc.apr,
+      activeAcc.lengthMonths
+    );
+
+    const updatedAccount = {
+      ...activeAcc,
+      startingDate: newDate,
+      monthlyPayment,
+      balances
+    };
+
+    onSaveAccounts(accounts.map(acc => acc.id === activeAcc.id ? updatedAccount : acc));
+    setActiveAcc(updatedAccount);
+  };
+
   const getAccountIcon = (type) => {
     switch (type) {
       case 'credit': return <CreditCard size={18} className="text-primary" />;
       case 'savings': return <PiggyBank size={18} className="text-primary" />;
       case 'summary': return <Briefcase size={18} className="text-primary" />;
+      case 'loan': return <Landmark size={18} className="text-primary" />;
       default: return <Receipt size={18} className="text-primary" />;
     }
   };
@@ -270,6 +380,7 @@ export default function AccountManager({ accounts, onSaveAccounts, transactions 
   const savings = accounts.filter(acc => acc.type === 'savings');
   const credit = accounts.filter(acc => acc.type === 'credit');
   const summary = accounts.filter(acc => acc.type === 'summary');
+  const loans = accounts.filter(acc => acc.type === 'loan');
 
   const renderAccountGroup = (title, groupAccounts) => {
     if (groupAccounts.length === 0) return null;
@@ -423,7 +534,7 @@ export default function AccountManager({ accounts, onSaveAccounts, transactions 
               />
             </div>
 
-            {type !== 'summary' && (
+            {type !== 'summary' && type !== 'loan' && (
               <div className="form-group fade-in">
                 <label htmlFor="accBank">Bank CSV Mapping Format</label>
                 <select 
@@ -443,7 +554,7 @@ export default function AccountManager({ accounts, onSaveAccounts, transactions 
               </div>
             )}
 
-            {type !== 'summary' && bank === 'Generic' && (
+            {type !== 'summary' && type !== 'loan' && bank === 'Generic' && (
               <div className="form-group fade-in" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '0.5rem', marginBottom: '0.5rem' }}>
                 <input 
                   id="accReverseAmounts"
@@ -458,6 +569,60 @@ export default function AccountManager({ accounts, onSaveAccounts, transactions 
               </div>
             )}
 
+            {type === 'loan' && (
+              <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '1rem' }}>
+                <div className="form-group">
+                  <label htmlFor="loanStartingDate">Starting Date</label>
+                  <input 
+                    id="loanStartingDate"
+                    type="date" 
+                    className="input" 
+                    value={loanStartingDate}
+                    onChange={(e) => setLoanStartingDate(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="loanStartingBalance">Starting Balance ($)</label>
+                  <input 
+                    id="loanStartingBalance"
+                    type="number" 
+                    step="0.01" 
+                    className="input" 
+                    placeholder="e.g. 15000.00"
+                    value={loanStartingBalance}
+                    onChange={(e) => setLoanStartingBalance(e.target.value)}
+                    required
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label htmlFor="loanApr">APR (%)</label>
+                    <input 
+                      id="loanApr"
+                      type="number" 
+                      step="0.01" 
+                      className="input" 
+                      value={loanApr}
+                      onChange={(e) => setLoanApr(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label htmlFor="loanLength">Length (Months)</label>
+                    <input 
+                      id="loanLength"
+                      type="number" 
+                      className="input" 
+                      value={loanLength}
+                      onChange={(e) => setLoanLength(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="form-group">
               <label htmlFor="accType">Account Type</label>
               <select 
@@ -466,7 +631,7 @@ export default function AccountManager({ accounts, onSaveAccounts, transactions 
                 value={type}
                 onChange={(e) => {
                   setType(e.target.value);
-                  if (e.target.value === 'summary') {
+                  if (e.target.value === 'summary' || e.target.value === 'loan') {
                     setBank('Generic');
                   }
                 }}
@@ -475,6 +640,7 @@ export default function AccountManager({ accounts, onSaveAccounts, transactions 
                 <option value="savings">Savings Account</option>
                 <option value="credit">Credit Card</option>
                 <option value="summary">Summary Account (Manual)</option>
+                <option value="loan">Loan Account (Amortized)</option>
               </select>
             </div>
 
@@ -515,6 +681,7 @@ export default function AccountManager({ accounts, onSaveAccounts, transactions 
               {renderAccountGroup('Savings Accounts', savings)}
               {renderAccountGroup('Credit Cards', credit)}
               {renderAccountGroup('Summary Accounts (Manual)', summary)}
+              {renderAccountGroup('Amortized Loan Accounts', loans)}
             </div>
           )}
         </div>
@@ -552,7 +719,7 @@ export default function AccountManager({ accounts, onSaveAccounts, transactions 
                   />
                 </div>
 
-                {activeAcc.type !== 'summary' && (
+                {activeAcc.type !== 'summary' && activeAcc.type !== 'loan' && (
                   <div>
                     <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Bank CSV Mapping Format</label>
                     <select 
@@ -569,7 +736,7 @@ export default function AccountManager({ accounts, onSaveAccounts, transactions 
                   </div>
                 )}
 
-                {activeAcc.type !== 'summary' && editBank === 'Generic' && (
+                {activeAcc.type !== 'summary' && activeAcc.type !== 'loan' && editBank === 'Generic' && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                     <input 
                       id="editAccReverseAmounts"
@@ -596,7 +763,7 @@ export default function AccountManager({ accounts, onSaveAccounts, transactions 
                   />
                 </div>
 
-                {activeAcc.type !== 'summary' && (
+                {activeAcc.type !== 'summary' && activeAcc.type !== 'loan' && (
                   <div style={{ display: 'flex', gap: '10px', marginTop: '4px', borderTop: '1px dashed var(--border-color)', paddingTop: '10px' }}>
                     <div style={{ flex: 1 }}>
                       <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Opening Balance Date</label>
@@ -721,8 +888,96 @@ export default function AccountManager({ accounts, onSaveAccounts, transactions 
               </>
             )}
 
+            {/* Amortized Loan History Section */}
+            {activeAcc.type === 'loan' && (() => {
+              const formatCurrency = (val) => {
+                const absVal = Math.abs(val);
+                const formatted = absVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                return (val < 0 ? '-' : '') + '$' + formatted;
+              };
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', flexGrow: 1, overflowY: 'auto' }}>
+                  {/* Loan Stats Panel */}
+                  <div className="card" style={{ padding: '1.25rem', backgroundColor: 'rgba(99, 102, 241, 0.02)', border: '1px solid var(--border-color)', marginBottom: '8px' }}>
+                    <h4 style={{ fontSize: '0.85rem', marginBottom: '0.75rem', fontWeight: '700', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Loan Amortization Details
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.85rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Starting Date:</span>
+                        <input 
+                          type="date"
+                          className="input"
+                          style={{ 
+                            marginLeft: '6px', 
+                            padding: '2px 6px', 
+                            fontSize: '0.85rem', 
+                            height: '24px', 
+                            width: '125px',
+                            background: 'rgba(255, 255, 255, 0.03)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '4px',
+                            color: 'var(--text-main)',
+                            display: 'inline-block',
+                            verticalAlign: 'middle',
+                            cursor: 'pointer'
+                          }}
+                          value={activeAcc.startingDate}
+                          onChange={(e) => handleUpdateLoanStartingDate(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--text-muted)' }}>Amortization Term:</span>
+                        <strong style={{ marginLeft: '6px', color: 'var(--text-main)' }}>{activeAcc.lengthMonths} Months</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--text-muted)' }}>Starting Principal:</span>
+                        <strong style={{ marginLeft: '6px', color: 'var(--text-main)' }}>{formatCurrency(activeAcc.startingBalance || 0)}</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--text-muted)' }}>Annual APR:</span>
+                        <strong style={{ marginLeft: '6px', color: 'var(--text-main)' }}>{activeAcc.apr}%</strong>
+                      </div>
+                      <div style={{ gridColumn: 'span 2', borderTop: '1px dashed var(--border-color)', paddingTop: '8px', marginTop: '4px' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Calculated Static Payment:</span>
+                        <strong style={{ marginLeft: '6px', color: 'var(--success)', fontSize: '0.95rem' }}>{formatCurrency(activeAcc.monthlyPayment || 0)}/mo</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Historical/Amortized Balance Entries List */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flexGrow: 1 }}>
+                    <h4 style={{ fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Amortization Schedule</h4>
+                    
+                    <div className="table-container" style={{ border: '1px solid var(--border-color)', borderRadius: '6px', overflowY: 'auto' }}>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Payment Month</th>
+                            <th>Date</th>
+                            <th style={{ textAlign: 'right' }}>Remaining Principal</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[...(activeAcc.balances || [])].map((entry, idx) => (
+                            <tr key={entry.id}>
+                              <td style={{ fontWeight: '600' }}>Month {idx}</td>
+                              <td style={{ color: 'var(--text-muted)' }}>{entry.date}</td>
+                              <td style={{ textAlign: 'right', fontWeight: '700', color: 'var(--danger)' }}>
+                                {formatCurrency(entry.balance)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Non-Manual History Section */}
-            {activeAcc.type !== 'summary' && (() => {
+            {activeAcc.type !== 'summary' && activeAcc.type !== 'loan' && (() => {
               const accTxs = transactions.filter(t => t.accountId === activeAcc.id);
               const openingEntry = accTxs.find(t => t.description === 'OPENING BALANCE BY FINITE');
               const openingAmount = openingEntry ? openingEntry.amount : 0;

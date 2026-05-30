@@ -375,7 +375,7 @@ export default function TransactionList({
               onChange={(e) => setFilterAccount(e.target.value)}
             >
               <option value="all">All Accounts</option>
-              {accounts.filter(acc => acc.type !== 'summary').map(acc => (
+              {accounts.filter(acc => acc.type !== 'summary' && acc.type !== 'loan').map(acc => (
                 <option key={acc.id} value={acc.id}>{acc.name}</option>
               ))}
             </select>

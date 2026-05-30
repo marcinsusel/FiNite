@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   LayoutGrid, Receipt, Landmark, Settings as SettingsIcon, 
   Upload, Cloud, Moon, Sun, AlertTriangle, ShieldCheck, CheckCircle2, Tag,
-  TrendingUp, PiggyBank, History, X
+  TrendingUp, PiggyBank, History, X, Sliders
 } from 'lucide-react';
 
 import Dashboard from './components/Dashboard';
@@ -13,6 +13,7 @@ import Settings from './components/Settings';
 import CategoryManager from './components/CategoryManager';
 import NetWorth from './components/NetWorth';
 import BudgetManager from './components/BudgetManager';
+import Planning from './components/Planning';
 
 import { parseBankStatement } from './utils/csvParser';
 import { detectDuplicates, migrateTransactions } from './utils/duplicateDetector';
@@ -328,6 +329,21 @@ export default function App() {
             onNavigate={setCurrentView}
           />
         );
+      case 'planning':
+        return (
+          <Planning 
+            transactions={database.transactions}
+            accounts={database.accounts}
+            categories={database.categories}
+            scenarios={database.scenarios || []}
+            onSaveScenarios={(updatedScenarios) => {
+              setDatabase(prev => ({
+                ...prev,
+                scenarios: updatedScenarios
+              }));
+            }}
+          />
+        );
       case 'net-worth':
         return (
           <NetWorth 
@@ -493,7 +509,7 @@ export default function App() {
                   }}
                 >
                   <option value="">-- Select Bank Account --</option>
-                  {database.accounts.filter(acc => acc.type !== 'summary').map(acc => (
+                  {database.accounts.filter(acc => acc.type !== 'summary' && acc.type !== 'loan').map(acc => (
                     <option key={acc.id} value={acc.id}>{acc.name} ({acc.bank})</option>
                   ))}
                 </select>
@@ -672,6 +688,15 @@ export default function App() {
               </li>
               <li>
                 <div 
+                  className={`nav-item ${currentView === 'planning' ? 'active' : ''}`}
+                  onClick={() => handleNavClick('planning')}
+                >
+                  <Sliders size={18} />
+                  <span>Scenario Planning</span>
+                </div>
+              </li>
+              <li>
+                <div 
                   className={`nav-item ${currentView === 'transactions' ? 'active' : ''}`}
                   onClick={() => handleNavClick('transactions')}
                 >
@@ -759,6 +784,7 @@ export default function App() {
             {currentView === 'dashboard' && 'Dashboard Overview'}
             {currentView === 'net-worth' && 'Net Worth History'}
             {currentView === 'budget' && 'Monthly Budgeting'}
+            {currentView === 'planning' && 'Financial Scenario Planning'}
             {currentView === 'transactions' && 'Transactions'}
             {currentView === 'accounts' && 'Configure Accounts'}
             {currentView === 'categories' && 'Manage Categories'}

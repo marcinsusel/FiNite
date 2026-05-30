@@ -108,7 +108,7 @@ export default function Dashboard({ transactions, accounts, categories, onNaviga
   const netCashFlow = totalInflow + totalOutflow; // Note: totalOutflow is negative
 
   // Aggregate Net Activity by Bank Account
-  const accountBalances = accounts.filter(acc => acc.type !== 'summary').map(acc => {
+  const accountBalances = accounts.filter(acc => acc.type !== 'summary' && acc.type !== 'loan').map(acc => {
     const accTxs = filteredTxs.filter(t => t.accountId === acc.id);
     const netActivity = accTxs.reduce((sum, t) => sum + t.amount, 0);
     return {

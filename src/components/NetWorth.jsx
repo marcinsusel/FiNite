@@ -87,8 +87,8 @@ export default function NetWorth({ transactions, accounts }) {
 
     accounts.forEach(acc => {
       let balance = 0;
-      if (acc.type === 'summary') {
-        // Manual summary account balance as of D: most recent entry <= D
+      if (acc.type === 'summary' || acc.type === 'loan') {
+        // Manual summary/loan account balance as of D: most recent entry <= D
         const sorted = [...(acc.balances || [])].sort((a, b) => b.date.localeCompare(a.date));
         const latest = sorted.find(entry => entry.date <= D);
         balance = latest ? latest.balance : 0;
@@ -107,7 +107,7 @@ export default function NetWorth({ transactions, accounts }) {
 
       let prevBalance = 0;
       if (prevD) {
-        if (acc.type === 'summary') {
+        if (acc.type === 'summary' || acc.type === 'loan') {
           const sorted = [...(acc.balances || [])].sort((a, b) => b.date.localeCompare(a.date));
           const latest = sorted.find(entry => entry.date <= prevD);
           prevBalance = latest ? latest.balance : 0;
