@@ -18,6 +18,7 @@ import { parseBankStatement } from './utils/csvParser';
 import { detectDuplicates, migrateTransactions } from './utils/duplicateDetector';
 import { initOAuthClient, syncAndLoadDatabase, saveDatabaseToDrive } from './utils/googleDriveHelper';
 import { getAutoCategoryId } from './utils/autoCategorizer';
+import { version } from '../package.json';
 
 const LOCAL_STORAGE_DB_KEY = 'finite_local_db';
 const LOCAL_STORAGE_CLIENT_ID_KEY = 'finite_google_client_id';
@@ -746,7 +747,7 @@ export default function App() {
           </button>
 
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-            FiNite Ledger v1.0.0
+            FiNite Ledger v{version}
           </div>
         </div>
       </aside>
