@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Calendar, Tag, ExternalLink } from 'lucide-react';
 
-export default function Dashboard({ transactions, accounts, categories, onNavigate }) {
+export default function Dashboard({ transactions, accounts, categories, excludedCategoryIds = [], onNavigate }) {
   // Extract all unique months (YYYY-MM) from transactions for filtering
   const months = Array.from(
     new Set(transactions.map(t => t.date.substring(0, 7)))
@@ -91,6 +91,8 @@ export default function Dashboard({ transactions, accounts, categories, onNaviga
       const amt = Number(split.amount || 0);
       const catId = split.categoryId || 'cat-uncategorized';
       
+      if (excludedCategoryIds.includes(catId)) return;
+
       if (!categoryAgg[catId]) {
         categoryAgg[catId] = { name: 'Unknown', inflow: 0, outflow: 0 };
       }
@@ -110,7 +112,12 @@ export default function Dashboard({ transactions, accounts, categories, onNaviga
   // Aggregate Net Activity by Bank Account
   const accountBalances = accounts.filter(acc => acc.type !== 'summary' && acc.type !== 'loan').map(acc => {
     const accTxs = filteredTxs.filter(t => t.accountId === acc.id);
-    const netActivity = accTxs.reduce((sum, t) => sum + t.amount, 0);
+    const netActivity = accTxs.reduce((sum, t) => {
+      const validSplitsSum = t.splits
+        .filter(s => !excludedCategoryIds.includes(s.categoryId || 'cat-uncategorized'))
+        .reduce((sSum, s) => sSum + Number(s.amount || 0), 0);
+      return sum + validSplitsSum;
+    }, 0);
     return {
       ...acc,
       netActivity

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Filter, Calendar, Search, Edit3, Trash2, Plus, Check, X, AlertCircle, Download } from 'lucide-react';
 
 export default function TransactionList({ 
@@ -9,6 +9,8 @@ export default function TransactionList({
   onUpdateTransaction,
   onDeleteTransaction 
 }) {
+  const firstCategoryRef = useRef(null);
+
   // Filter States
   const [filterAccount, setFilterAccount] = useState(() => localStorage.getItem('finite_filter_account') || 'all');
   const [filterCategory, setFilterCategory] = useState(() => localStorage.getItem('finite_filter_category') || 'all');
@@ -49,6 +51,17 @@ export default function TransactionList({
   // Active Transaction for Split Drawer
   const [activeTx, setActiveTx] = useState(null);
   const [tempSplits, setTempSplits] = useState([]);
+
+  // Focus the first category dropdown when drawer opens
+  useEffect(() => {
+    if (activeTx) {
+      setTimeout(() => {
+        if (firstCategoryRef.current) {
+          firstCategoryRef.current.focus();
+        }
+      }, 50);
+    }
+  }, [activeTx]);
 
   // Inline category creation states
   const [inlineNewCatForSplit, setInlineNewCatForSplit] = useState(null); // splitId
@@ -654,113 +667,140 @@ export default function TransactionList({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flexGrow: 1, overflowY: 'auto' }}>
               <h4 style={{ fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Allocations</h4>
               
-              {tempSplits.map((split, index) => (
-                <div key={split.id} className="split-row">
-                  {/* Category Dropdown or Inline Input */}
-                  {inlineNewCatForSplit === split.id ? (
-                    <div style={{ display: 'flex', gap: '4px', width: '100%' }}>
-                      <input 
-                        type="text"
-                        className="input"
-                        placeholder="New category..."
-                        style={{ fontSize: '0.85rem', padding: '0.4rem' }}
-                        value={inlineNewCatName}
-                        onChange={(e) => setInlineNewCatName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleSaveInlineCategory(split.id);
-                          } else if (e.key === 'Escape') {
-                            e.preventDefault();
-                            e.stopPropagation();
+              {tempSplits.map((split, index) => {
+                const originalSplit = activeTx.splits?.[index];
+                const categoryChanged = !originalSplit || split.categoryId !== originalSplit.categoryId;
+                const amountChanged = !originalSplit || Number(split.amount) !== Number(originalSplit.amount);
+                const notesChanged = !originalSplit || (split.notes || '') !== (originalSplit.notes || '');
+
+                return (
+                  <div key={split.id} className="split-row">
+                    {/* Category Dropdown or Inline Input */}
+                    {inlineNewCatForSplit === split.id ? (
+                      <div style={{ display: 'flex', gap: '4px', width: '100%' }}>
+                        <input 
+                          type="text"
+                          className="input"
+                          placeholder="New category..."
+                          style={{ fontSize: '0.85rem', padding: '0.4rem' }}
+                          value={inlineNewCatName}
+                          onChange={(e) => setInlineNewCatName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleSaveInlineCategory(split.id);
+                            } else if (e.key === 'Escape') {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setInlineNewCatForSplit(null);
+                              setInlineNewCatName('');
+                            }
+                          }}
+                          disabled={activeTx.reviewed}
+                          autoFocus
+                        />
+                        <button 
+                          onClick={() => handleSaveInlineCategory(split.id)}
+                          disabled={activeTx.reviewed}
+                          className="btn btn-primary"
+                          style={{ padding: '6px', minHeight: 'auto' }}
+                          title="Save Category"
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button 
+                          onClick={() => {
                             setInlineNewCatForSplit(null);
                             setInlineNewCatName('');
+                          }}
+                          disabled={activeTx.reviewed}
+                          className="btn btn-secondary"
+                          style={{ padding: '6px', minHeight: 'auto' }}
+                          title="Cancel"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <select 
+                        ref={index === 0 ? firstCategoryRef : null}
+                        className="input select"
+                        style={{ 
+                          fontSize: '0.85rem', 
+                          padding: '0.5rem',
+                          borderColor: categoryChanged ? 'var(--primary)' : 'var(--border-color)',
+                          boxShadow: categoryChanged ? '0 0 0 1px var(--primary)' : 'none'
+                        }}
+                        value={split.categoryId}
+                        disabled={activeTx.reviewed}
+                        onChange={(e) => {
+                          if (e.target.value === 'ADD_NEW_CAT') {
+                            setInlineNewCatForSplit(split.id);
+                            setInlineNewCatName('');
+                          } else {
+                            handleUpdateSplitField(split.id, 'categoryId', e.target.value);
                           }
                         }}
-                        disabled={activeTx.reviewed}
-                        autoFocus
-                      />
-                      <button 
-                        onClick={() => handleSaveInlineCategory(split.id)}
-                        disabled={activeTx.reviewed}
-                        className="btn btn-primary"
-                        style={{ padding: '6px', minHeight: 'auto' }}
-                        title="Save Category"
                       >
-                        <Check size={14} />
-                      </button>
-                      <button 
-                        onClick={() => {
-                          setInlineNewCatForSplit(null);
-                          setInlineNewCatName('');
-                        }}
-                        disabled={activeTx.reviewed}
-                        className="btn btn-secondary"
-                        style={{ padding: '6px', minHeight: 'auto' }}
-                        title="Cancel"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  ) : (
-                    <select 
-                      className="input select"
-                      style={{ fontSize: '0.85rem', padding: '0.5rem' }}
-                      value={split.categoryId}
-                      disabled={activeTx.reviewed}
-                      onChange={(e) => {
-                        if (e.target.value === 'ADD_NEW_CAT') {
-                          setInlineNewCatForSplit(split.id);
-                          setInlineNewCatName('');
-                        } else {
-                          handleUpdateSplitField(split.id, 'categoryId', e.target.value);
-                        }
+                        {categories.map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                        <option value="ADD_NEW_CAT" style={{ color: 'var(--primary)', fontWeight: 'bold' }}>
+                          + Add New Category...
+                        </option>
+                      </select>
+                    )}
+
+                    {/* Amount Input */}
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      className="input" 
+                      style={{ 
+                        fontSize: '0.85rem', 
+                        padding: '0.5rem', 
+                        textAlign: 'right',
+                        borderColor: amountChanged ? 'var(--primary)' : 'var(--border-color)',
+                        boxShadow: amountChanged ? '0 0 0 1px var(--primary)' : 'none'
                       }}
+                      value={split.amount}
+                      disabled={activeTx.reviewed}
+                      onChange={(e) => handleUpdateSplitField(split.id, 'amount', e.target.value)}
+                      placeholder="0.00"
+                    />
+
+                    {/* Delete Button */}
+                    <button 
+                      onClick={() => handleDeleteSplit(split.id)}
+                      disabled={activeTx.reviewed || tempSplits.length <= 1}
+                      className="btn btn-secondary btn-sm"
+                      style={{ padding: '6px', color: (tempSplits.length <= 1 || activeTx.reviewed) ? 'var(--text-muted)' : 'var(--danger)', opacity: (tempSplits.length <= 1 || activeTx.reviewed) ? 0.3 : 1, minHeight: 'auto' }}
                     >
-                      {categories.map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                      ))}
-                      <option value="ADD_NEW_CAT" style={{ color: 'var(--primary)', fontWeight: 'bold' }}>
-                        + Add New Category...
-                      </option>
-                    </select>
-                  )}
+                      <Trash2 size={14} />
+                    </button>
 
-                  {/* Amount Input */}
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    className="input" 
-                    style={{ fontSize: '0.85rem', padding: '0.5rem', textAlign: 'right' }}
-                    value={split.amount}
-                    disabled={activeTx.reviewed}
-                    onChange={(e) => handleUpdateSplitField(split.id, 'amount', e.target.value)}
-                    placeholder="0.00"
-                  />
-
-                  {/* Delete Button */}
-                  <button 
-                    onClick={() => handleDeleteSplit(split.id)}
-                    disabled={activeTx.reviewed || tempSplits.length <= 1}
-                    className="btn btn-secondary btn-sm"
-                    style={{ padding: '6px', color: (tempSplits.length <= 1 || activeTx.reviewed) ? 'var(--text-muted)' : 'var(--danger)', opacity: (tempSplits.length <= 1 || activeTx.reviewed) ? 0.3 : 1, minHeight: 'auto' }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-
-                  {/* Note Input */}
-                  <input 
-                    type="text" 
-                    className="input" 
-                    style={{ gridColumn: 'span 3', fontSize: '0.8rem', padding: '4px 8px', marginTop: '2px', opacity: 0.8 }}
-                    value={split.notes}
-                    disabled={activeTx.reviewed}
-                    onChange={(e) => handleUpdateSplitField(split.id, 'notes', e.target.value)}
-                    placeholder="Add split notes/description..."
-                  />
-                </div>
-              ))}
+                    {/* Note Input */}
+                    <input 
+                      type="text" 
+                      className="input" 
+                      style={{ 
+                        gridColumn: 'span 3', 
+                        fontSize: '0.8rem', 
+                        padding: '4px 8px', 
+                        marginTop: '2px', 
+                        opacity: 0.8,
+                        borderColor: notesChanged ? 'var(--primary)' : 'var(--border-color)',
+                        boxShadow: notesChanged ? '0 0 0 1px var(--primary)' : 'none'
+                      }}
+                      value={split.notes}
+                      disabled={activeTx.reviewed}
+                      onChange={(e) => handleUpdateSplitField(split.id, 'notes', e.target.value)}
+                      placeholder="Add split notes/description..."
+                    />
+                  </div>
+                );
+              })}
 
               <button 
                 onClick={handleAddSplit} 

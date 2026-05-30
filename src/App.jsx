@@ -36,7 +36,8 @@ const DEFAULT_DB = {
     { id: 'cat-transportation', name: 'Transportation/Auto' },
     { id: 'cat-transfer', name: 'Internal Transfer' }
   ],
-  transactions: []
+  transactions: [],
+  excludedCategoryIds: []
 };
 
 export default function App() {
@@ -311,6 +312,7 @@ export default function App() {
             transactions={database.transactions}
             accounts={database.accounts}
             categories={database.categories}
+            excludedCategoryIds={database.excludedCategoryIds || []}
             onNavigate={setCurrentView}
           />
         );
@@ -482,6 +484,14 @@ export default function App() {
             syncState={syncState}
             syncError={syncError}
             onForceSync={handleForceSync}
+            categories={database.categories || []}
+            excludedCategoryIds={database.excludedCategoryIds || []}
+            onSaveExcludedCategoryIds={(ids) => {
+              setDatabase(prev => ({
+                ...prev,
+                excludedCategoryIds: ids
+              }));
+            }}
           />
         );
       case 'import-upload':
